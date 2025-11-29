@@ -1,0 +1,7 @@
+dataset:
+  name: roman_numeral
+  n_samples: 100
+  n_features: 12
+  variant: "tiny"
+  task_family: roman_numeral
+  split: dev

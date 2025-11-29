@@ -1,0 +1,14 @@
+surrogate:
+  # Week 3 defaults (mock, deterministic)
+  monotone: true
+  max_interaction_order: 2
+  group_l1: 0.0
+  l2: 0.0
+  cv_folds: 5
+  early_stopping_patience: 5
+  calibration: isotonic
+
+  # Back-compat knobs used by scaffolding
+  nonneg: true
+  selection: aic
+  interactions: 0

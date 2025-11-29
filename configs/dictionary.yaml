@@ -1,0 +1,11 @@
+# Ensemble dictionary selection thresholds and caps (Phase 1 Week 2)
+dictionary:
+  synergy_min: 0.0
+  stability_min: 0.5
+  max_per_family: 50
+  dedup_jaccard_min: 0.5
+  exemplars_top_k: 3
+  # Mock Gate 1 minimum per top family; tests may override to smaller values
+  min_passed_per_top_family: 5
+  # When null, use discovery.week2_screening.top_families from configs/discovery.yaml
+  families: null

@@ -1,0 +1,7 @@
+editing:
+  scale: 0.3
+  clamp: null
+  rollback_delta: 0.05
+  rollback_thresholds:
+    benign_deg_pct: 0.5
+    specificity_min_ratio: 1.2

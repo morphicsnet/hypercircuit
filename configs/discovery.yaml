@@ -1,0 +1,23 @@
+discovery:
+  # Week 1 baselines
+  min_weighted_support: 0.01
+  synergy_threshold: 0.0
+  stability_score_min: 0.5
+  dedup_jaccard_min: 0.5
+  candidate_caps:
+    size2: 1000
+    size3: 300
+    temporal_span: 3
+
+  # Back-compat knobs used by scaffolding
+  min_support: 2
+  max_set_size: 3
+  candidate_cap: 50
+
+  # Week 2 screening
+  week2_screening:
+    top_families:
+      - sycophancy
+      - jailbreak
+    replicates_k: 3
+    paraphrase_replicates: 2

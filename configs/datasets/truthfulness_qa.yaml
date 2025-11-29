@@ -1,0 +1,7 @@
+dataset:
+  name: truthfulness_qa
+  n_samples: 128
+  n_features: 12
+  variant: "tiny"
+  task_family: truthfulness_qa
+  split: dev

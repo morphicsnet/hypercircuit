@@ -1,0 +1,7 @@
+dataset:
+  name: synthetic_parity
+  n_samples: 64
+  n_features: 8
+  variant: "tiny"
+  task_family: synthetic_parity
+  split: dev

@@ -1,0 +1,21 @@
+logging:
+  # Week 1 baseline instrumentation
+  instrumented_layers: [-12,-11,-10,-9,-8,-7,-6,-5,-4,-3,-2,-1]
+  token_window: 160
+  thresholds:
+    quantile_top_percent: 99.5
+    zscore_on: 3.0
+    hysteresis_off_ratio: 0.8
+    top_k_per_node_type: 2
+  expected_event_density_range: [3, 12]
+  node_types:
+    sae_features: true
+    attn_heads: true
+    mlp_channels: true
+    residual_dirs: true
+
+  # Mock logger knobs used by ActivationLogger
+  tokens_per_sample: 8
+  threshold: 0.5
+  hysteresis: 0.05
+  sparsity: 0.1

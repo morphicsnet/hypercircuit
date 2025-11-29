@@ -1,0 +1,7 @@
+dataset:
+  name: deceptive_reasoning
+  n_samples: 96
+  n_features: 12
+  variant: "tiny"
+  task_family: deceptive_reasoning
+  split: dev

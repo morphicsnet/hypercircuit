@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hypercircuit"
+version = "0.1.0"
+description = "HYPERCIRCUIT framework skeleton: SAE-first interpretability workflow scaffolding."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "HYPERCIRCUIT Authors" }]
+dependencies = [
+  "numpy>=1.24",
+  "scipy>=1.10",
+  "torch>=2.1",
+  "einops>=0.6",
+  "pyyaml>=6.0",
+  "pydantic>=2.4",
+  "scikit-learn>=1.3",
+  "tqdm>=4.66",
+  "rich>=13.0",
+  "networkx>=3.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.4",
+  "ruff>=0.6.0",
+  "mypy>=1.7.0",
+  "types-PyYAML>=6.0.12.20240808",
+]
+kernels = [
+  "hyppo>=0.4.0",
+]
+
+[project.scripts]
+hypercircuit-run-log = "hypercircuit.cli.run_log:main"
+hypercircuit-run-discovery = "hypercircuit.cli.run_discovery:main"
+hypercircuit-run-surrogate = "hypercircuit.cli.run_surrogate:main"
+hypercircuit-run-causal-eval = "hypercircuit.cli.run_causal_eval:main"
+hypercircuit-run-edit-eval = "hypercircuit.cli.run_edit_eval:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["hypercircuit*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_configs = true
+ignore_missing_imports = true
+strict_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_optional = true

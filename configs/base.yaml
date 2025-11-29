@@ -1,0 +1,51 @@
+run:
+  # Week 1 registry/run metadata
+  output_dir: "runs"
+  run_id: "mock"
+  seeds: [0, 1, 2, 3, 4]
+  stage: null
+  model_tag: "debug"
+  task_family: null
+  split: "dev"
+  # Legacy knobs (still honored by CLIs as fallback)
+  seed: 0
+  run_dir: "runs/mock"
+  mock: true
+  timestamped: false
+
+dataset:
+  name: synthetic_parity
+  n_samples: 64
+  n_features: 8
+  variant: "tiny"
+
+logging:
+  # Mock logger knobs used by ActivationLogger
+  tokens_per_sample: 8
+  threshold: 0.5
+  hysteresis: 0.05
+  sparsity: 0.1
+  storage: jsonl
+
+discovery:
+  # Back-compat knobs used by scaffolding
+  min_support: 2
+  max_set_size: 3
+  candidate_cap: 50
+  synergy_threshold: -0.5
+
+surrogate:
+  nonneg: true
+  cv_folds: 3
+  selection: aic
+  interactions: 0
+
+causal:
+  ablation_strength: 1.0
+  patch_window: 4
+  subset_size: 16
+
+editing:
+  scale: 0.3
+  clamp: null
+  rollback_delta: 0.05

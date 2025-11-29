@@ -1,0 +1,7 @@
+dataset:
+  name: sycophancy
+  n_samples: 128
+  n_features: 12
+  variant: "tiny"
+  task_family: sycophancy
+  split: dev
