@@ -32,7 +32,7 @@ def main(argv: Optional[List[str]] = None) -> None:
     else:
         # fallback from legacy run_dir if present
         legacy = run_sec.get("run_dir")
-        if legacy and not run_sec.get("run_id"):
+        if legacy:
             lp = Path(legacy)
             run_sec["output_dir"] = str(lp.parent)
             run_sec["run_id"] = lp.name
@@ -49,6 +49,12 @@ def main(argv: Optional[List[str]] = None) -> None:
     # Seed policy: choose active seed index 0 for Week 1 baseline
     seed_val = active_seed(run_sec.get("seeds"), stage_idx=0)
 
+    # Resolve dataset toggles for Week 7 expansion
+    ds_family = run_sec.get("task_family")
+    ds_top = bool(getattr(cfg.dataset, "top_behaviors", False))
+    top_fams = list(getattr(cfg.logging, "top_behaviors_families", []) or getattr(cfg.discovery.week2_screening, "top_families", []))
+    layers24 = list(getattr(cfg.logging, "layers_profile_24", []) or [])
+
     logger = ActivationLogger(
         tokens_per_sample=cfg.logging.tokens_per_sample,
         threshold=cfg.logging.threshold,
@@ -60,6 +66,12 @@ def main(argv: Optional[List[str]] = None) -> None:
         token_window=cfg.logging.token_window,
         thresholds=cfg.logging.thresholds,
         node_types=cfg.logging.node_types.model_dump(),
+        # Week 7 toggles
+        top_behaviors_only=bool(getattr(cfg.logging, "top_behaviors_only", False)),
+        top_behaviors_families=top_fams,
+        layers_profile_24=layers24,
+        dataset_family=ds_family,
+        dataset_top_behaviors=ds_top,
     )
     metrics = logger.run(out_path=out_path, n_samples=cfg.dataset.n_samples)
 
@@ -83,6 +95,8 @@ def main(argv: Optional[List[str]] = None) -> None:
             "n_samples": cfg.dataset.n_samples,
             "n_features": cfg.dataset.n_features,
             "seed": seed_val,
+            # Week 7 acceptance metric
+            "n_layers_used": int(metrics.get("n_layers", 0)),
         },
     )
 

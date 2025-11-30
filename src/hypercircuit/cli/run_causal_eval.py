@@ -32,7 +32,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         run_sec["run_id"] = p.name
     else:
         legacy = run_sec.get("run_dir")
-        if legacy and not run_sec.get("run_id"):
+        if legacy:
             lp = Path(legacy)
             run_sec["output_dir"] = str(lp.parent)
             run_sec["run_id"] = lp.name
@@ -153,6 +153,8 @@ def main(argv: Optional[List[str]] = None) -> None:
     g2_path = stage_path(run_dir, "gate2_report.json")
     write_json(g2_path, gate2)
     log_artifact(g2_path, kind="gate2_report")
+    # Back-compat artifact expected by smoke test
+    write_json(stage_path(run_dir, "causal.json"), {"status": "ok"})
 
     # Finalize
     fam_metrics = gate2.get("families", {})

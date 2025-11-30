@@ -254,3 +254,241 @@ Run end-to-end (mock/deterministic) to train surrogates across all families, eva
   - coverage_ok: at least half of the configured grid evaluated
   - effect_ok: median hypercircuit_full &gt; baselines in ≥ 50% of families
   - stability_ok: median seed stability ≥ 0.8
+
+## Roadmap
+
+- Full plan: [docs/ROADMAP_V1_to_V2.md](docs/ROADMAP_V1_to_V2.md)
+  - Executive overview; target architecture and principles; data and storage plan; interfaces and contracts; phased roadmap with deliverables, gates, risks; migration plan; metrics; compute/storage/scheduling; roles and QA; risks and mitigations; timeline; and forward-compatible V1 changes.
+- Contracts and schemas: [docs/CONTRACTS_AND_SCHEMAS.md](docs/CONTRACTS_AND_SCHEMAS.md)
+  - Prose schemas for feature activation logs, candidate hyperedges, dynamic circuit graph snapshots, manifold snapshots, time-window indices and state bundles; six core contracts (ensemble discovery, circuit graph abstraction, Sidecar intake, manifold constraint, surrogate and causal evaluation, safety edit protocols); governance, retention, and migration notes.
+
+## Week 5: Safety edits and Gate 3
+
+Run the safety edit planning, staged monitoring, and Gate 3 reporting (mock/deterministic).
+
+- CLI (module):
+  - python -m hypercircuit.cli.run_week5_safety --config configs/base.yaml configs/editing.yaml configs/causal.yaml configs/dictionary.yaml
+- Script wrapper:
+  - python [scripts/run_week5_safety.py](scripts/run_week5_safety.py:1) --config configs/base.yaml configs/editing.yaml configs/causal.yaml configs/dictionary.yaml
+
+What it does (mock):
+- Starts registry stage "week5_safety"
+- Resolves risky families from config
+- Proposes a deterministic edit plan and simulates impact
+- Runs a monitored loop over the configured step schedule with per-step safety evaluation and specificity checks
+- Writes artifacts and assembles Gate 3 report with acceptance flags and determinism checksums
+
+Artifacts (under the active run directory):
+- safety_edit_plans.jsonl — proposed_scales (by family), ranking, applied_scales_per_step, seed
+- safety_eval_results.jsonl — per-step per-family metrics: harmful_rate_reduction, benign_deg_pct, specificity_ratio, thresholds, breach flags
+- gate3_report.json — per-family acceptance flags and global accept_all, reasons_for_fail, determinism checksums, config snapshot, seeds
+
+Acceptance bars (defaults, mock):
+- harmful_rate_reduction ≥ 0.20 (target)
+- benign_deg_pct ≤ 0.50
+- specificity_ratio ≥ 1.20
+
+## Week 7: 24-layer logging, semantic labeling, and dashboards
+
+This phase expands activation logging to 24 relative layers for top behaviors, finalizes semantic labels deterministically, and exports lightweight dashboard JSONs. All pipelines remain mock/deterministic and reuse existing artifacts and registry wiring.
+
+Key modules and configs:
+- [configs/logging.yaml](configs/logging.yaml)
+- [configs/datasets/sycophancy.yaml](configs/datasets/sycophancy.yaml), [configs/datasets/jailbreak.yaml](configs/datasets/jailbreak.yaml), [configs/datasets/deceptive_reasoning.yaml](configs/datasets/deceptive_reasoning.yaml)
+- [src/hypercircuit/logging/activations.py](src/hypercircuit/logging/activations.py)
+- [src/hypercircuit/semantics/labeling.py](src/hypercircuit/semantics/labeling.py)
+- [src/hypercircuit/dashboards/export.py](src/hypercircuit/dashboards/export.py)
+- [src/hypercircuit/cli/run_week7_labels_dash.py](src/hypercircuit/cli/run_week7_labels_dash.py)
+- [scripts/run_week7_labels_dash.py](scripts/run_week7_labels_dash.py)
+- Tests: [tests/test_week7_labels_dash.py](tests/test_week7_labels_dash.py)
+
+### 1) 24-layer logging for top behaviors
+The logger can expand from 12 to 24 relative layers for top families while keeping event density within the configured band.
+
+- Config toggles in [configs/logging.yaml](configs/logging.yaml):
+  - logging.top_behaviors_only: false by default; set true to enable expansion for top families
+  - logging.top_behaviors_families: ["sycophancy","jailbreak","deceptive_reasoning"] default
+  - logging.layers_profile_24: [-24..-1] default profile
+- Per-family overlays set a dataset flag to trigger expansion:
+  - dataset.top_behaviors: true set in [configs/datasets/sycophancy.yaml](configs/datasets/sycophancy.yaml), [configs/datasets/jailbreak.yaml](configs/datasets/jailbreak.yaml), [configs/datasets/deceptive_reasoning.yaml](configs/datasets/deceptive_reasoning.yaml)
+
+Run mock logging with 24-layer expansion (example):
+- Module:
+  - python -m hypercircuit.cli.run_log --config configs/base.yaml configs/logging.yaml configs/datasets/sycophancy.yaml -o logging.top_behaviors_only=true -o run.run_dir=runs/week7_logging_syc
+- Script wrapper:
+  - python scripts/run_log.py --config configs/base.yaml configs/logging.yaml configs/datasets/sycophancy.yaml -o logging.top_behaviors_only=true -o run.run_dir=runs/week7_logging_syc
+
+Expected:
+- Prints sanity line with events_per_token within the band from logging.expected_event_density_range
+- Writes runs/&lt;run_id&gt;/logs.jsonl
+- Manifest summary includes n_layers and n_layers_used=24
+
+### 2) Semantic labeling finalization
+Deterministically finalizes semantic labels for accepted ensembles, emitting JSONL records and an aggregated report. Selection is seed-stable and fast.
+
+- Entrypoint:
+  - Module: python -m hypercircuit.cli.run_week7_labels_dash --config configs/base.yaml configs/discovery.yaml configs/dictionary.yaml -o run.run_dir=runs/week7_labels_dash
+  - Script: python [scripts/run_week7_labels_dash.py](scripts/run_week7_labels_dash.py)
+- Output artifacts (under the run directory):
+  - labels.jsonl — fields: ensemble_id, family, label_text, evidence_tokens, context_summary, confidence, uncertainty, exemplars, annotator_stub, seed, schema_version
+  - label_report.json — per-family coverage, mock agreement kappa, drift checks
+
+Implementation notes:
+- Label pipeline: [src/hypercircuit/semantics/labeling.py](src/hypercircuit/semantics/labeling.py)
+  - finalize_labels() writes labels.jsonl and label_report.json deterministically
+  - compute_agreement_metrics() returns mock Cohen’s kappa and drift stubs
+
+### 3) Dashboards JSON export
+Lightweight, dashboard-ready JSONs cross-link ensembles with labels and summarize coverage.
+
+- Export functions: [src/hypercircuit/dashboards/export.py](src/hypercircuit/dashboards/export.py)
+  - export_dashboard_ensembles(...) — dashboard_ensembles.json
+  - export_dashboard_labels(...) — dashboard_labels.json
+  - export_dashboard_summary(...) — dashboard_summary.json
+- The Week 7 CLI emits these by default with provenance and stable payloads.
+
+CLI acceptance and manifest:
+- The Week 7 CLI finalizes the registry with:
+  - label_coverage, agreement_kappa_mock
+  - dashboard_sections_emitted
+  - accept_week7 (bool; non-empty labels, kappa ≥ target, and all sections emitted)
+
+### Determinism and tests
+- Deterministic seeds are reused throughout. Re-running with identical config yields identical labels and dashboard checksums (timestamps sanitized in tests).
+- See test coverage in [tests/test_week7_labels_dash.py](tests/test_week7_labels_dash.py)
+
+### Quick reference
+- 24-layer logging (top behaviors): enable logging.top_behaviors_only=true and use a dataset overlay with dataset.top_behaviors=true
+- Labels+Dashboards CLI: python -m hypercircuit.cli.run_week7_labels_dash --config configs/base.yaml configs/discovery.yaml configs/dictionary.yaml
+- Artifacts written under runs/&lt;run_id&gt;:
+  - logs.jsonl (if you ran logging)
+  - labels.jsonl
+  - label_report.json
+  - dashboard_ensembles.json
+  - dashboard_labels.json
+  - dashboard_summary.json
+
+
+## Week 8: Freeze and Release
+
+This phase freezes the current ensemble dictionary into an immutable snapshot with provenance, consolidates Gate 1–4, labeling, and dashboard summaries into a final report, emits a scaling recommendation, and registers a single release bundle manifest.
+
+Key modules:
+- Freezer: [freeze.py](src/hypercircuit/dictionary/freeze.py:1) providing [freeze_dictionary()](src/hypercircuit/dictionary/freeze.py:178) and [assemble_release_manifest()](src/hypercircuit/dictionary/freeze.py:291)
+- Final report: [final_report.py](src/hypercircuit/eval/final_report.py:1) providing [assemble_final_report()](src/hypercircuit/eval/final_report.py:52)
+- CLI orchestrator: [run_week8_release.py](src/hypercircuit/cli/run_week8_release.py:1) entrypoint [main()](src/hypercircuit/cli/run_week8_release.py:119)
+- Release bundle checksums (helper): [export.py](src/hypercircuit/dashboards/export.py:1) providing [compute_release_bundle_checksum()](src/hypercircuit/dashboards/export.py:228)
+
+Artifacts produced under the active run directory:
+- ensemble_dictionary_frozen.json
+- release_manifest.json
+- final_report.json
+- final_summary.md
+- docs/SCALING_RECOMMENDATION.md
+
+Determinism and IDs:
+- snapshot_id = sha1 over {timestamp_bucket (YYYYMMDD from dictionary header), seed, sorted family:id:members} truncated to 12 chars
+- release_bundle_checksum = stable aggregate MD5 over declared artifacts; JSON timestamps and markdown timestamps are sanitized before hashing
+
+How to run (mock/deterministic):
+- Module:
+  - python -m hypercircuit.cli.run_week8_release --config configs/base.yaml configs/discovery.yaml configs/dictionary.yaml -o run.run_dir=runs/week8_release_mock
+- Script wrapper:
+  - python [scripts/run_week8_release.py](scripts/run_week8_release.py:1) --config configs/base.yaml configs/discovery.yaml configs/dictionary.yaml -o run.run_dir=runs/week8_release_mock
+
+CLI orchestration:
+1) Freeze dictionary via [freeze_dictionary()](src/hypercircuit/dictionary/freeze.py:178) → ensemble_dictionary_frozen.json with snapshot metadata
+2) Assemble final_report + final_summary via [assemble_final_report()](src/hypercircuit/eval/final_report.py:52) consolidating Gate 1–4, labels, and dashboard summary
+3) Emit SCALING_RECOMMENDATION.md (templated deterministic note)
+4) Assemble release manifest via [assemble_release_manifest()](src/hypercircuit/dictionary/freeze.py:291) with artifact list, per-file checksums, acceptance flags, and release_bundle_checksum
+5) Finalize registry stage “week8_release” with snapshot_id, n_ensembles_frozen, accept_gate1..accept_gate4, accept_release, release_bundle_checksum, and reasons (if any)
+
+Tests:
+- End-to-end coverage in [tests/test_week8_release.py](tests/test_week8_release.py:1) verifies artifact existence, schema, and determinism of snapshot_id and release_bundle_checksum.
+
+<!-- BEGIN UPCOMING_VERSIONS -->
+
+## Upcoming Versions
+
+This repository is release‑ready for Version 1.0 (GO with conditions). The roadmap below summarizes near‑term versions and the V1 → V2 transition. For full details, see:
+- Roadmap: [docs/ROADMAP_V1_to_V2.md](docs/ROADMAP_V1_to_V2.md)
+- Contracts and Schemas: [docs/CONTRACTS_AND_SCHEMAS.md](docs/CONTRACTS_AND_SCHEMAS.md)
+- Scaling Recommendation: [docs/SCALING_RECOMMENDATION.md](docs/SCALING_RECOMMENDATION.md)
+
+Quick links:
+- Dashboards/labels export: [scripts/run_week7_labels_dash.py](scripts/run_week7_labels_dash.py)
+- Release bundle (freeze + manifest): [scripts/run_week8_release.py](scripts/run_week8_release.py)
+
+### V1.1 Patch Series (stability and polish)
+
+Status: Planned (near‑term)
+
+Objectives
+- Tighten safety edit specificity floors; expand benign control suites.
+- Add stronger paraphrase/adversarial robustness sets beyond mocks.
+- Improve necessity diagnostics and per‑family rollback drills.
+- Documentation polish and dashboards usability improvements.
+
+Key changes (planned)
+- Editing/safety tunables in [configs/editing.yaml](configs/editing.yaml) and evaluation knobs in [configs/causal.yaml](configs/causal.yaml).
+- Robustness evaluation corpus expansion (no breaking schema changes).
+- Additional tests around determinism, schema, and acceptance flags.
+
+Compatibility
+- Backward compatible. Existing data contracts in [docs/CONTRACTS_AND_SCHEMAS.md](docs/CONTRACTS_AND_SCHEMAS.md) remain stable.
+
+Migration from V1.0
+- Re‑run Week 5/6 safety + robustness suites using existing CLIs; no code changes required for consumers.
+
+### V1.5 Sidecar Preview (passive co‑evolving interpretability)
+
+Status: Planned
+
+Objectives
+- Introduce a passive Sidecar that mirrors the hypergraph and applies manifold‑constrained hyperedge creation and limited LLC‑driven structural updates (preview only).
+- Preserve dynamic→frozen graph split and provenance while adding Sidecar‑ingestible exports.
+
+Key changes (planned)
+- Optional Sidecar preview outputs (new artifacts) aligned to contracts in [docs/CONTRACTS_AND_SCHEMAS.md](docs/CONTRACTS_AND_SCHEMAS.md).
+- No behavioral changes to core pipelines by default; opt‑in via configs (to be documented in the preview release notes).
+
+Compatibility
+- Backward compatible; Sidecar artifacts are additive/optional.
+
+Migration from V1.0/1.1
+- Enable preview flags (documented in the release notes). Existing consumers need not change unless ingesting Sidecar outputs.
+
+### V2.0 HMCS Sidecar: Co‑evolving Interpretability
+
+Status: Planned
+
+Objectives
+- Full Sidecar controller mode with manifold‑guided hyperedge creation, implicit differentiation, and spectral smoothing of structural updates.
+- First‑class “ensemble‑level” safety edits and monitoring inside the Sidecar with rollback guarantees.
+
+Key changes (planned)
+- Stable Sidecar artifact sets and live coupling to circuit updates; extended dashboards.
+- Strengthened acceptance criteria and o.o.d. robustness gates.
+
+Compatibility
+- Strong effort toward backward compatibility. Some config and artifact shape extensions likely; migration scripts will be provided.
+
+Migration from V1.x
+- Projected one‑click migration with a conversion CLI and automatic registry backfills (documented at release).
+
+### Compatibility & Migration Summary
+
+- Data contracts: Stable for V1.x; V2 adds optional Sidecar artifacts (see [docs/CONTRACTS_AND_SCHEMAS.md](docs/CONTRACTS_AND_SCHEMAS.md)).
+- CLIs: Current CLIs remain; V1.5/V2 may add Sidecar‑focused entry points without breaking existing ones.
+- Configs: V1.1 tightens thresholds; V1.5 introduces opt‑in preview flags; V2 adds Sidecar sections.
+- Artifacts/Manifests: V1.0 freeze/manifest remain canonical; V2 adds Sidecar bundles alongside them.
+- Determinism: Seeds and canonicalization remain enforced across versions.
+
+### Safety Risks & Mitigations (tracked forward)
+
+- Sycophancy: Maintain high specificity ratio and low benign degradation; broaden control domains.
+- Jailbreak: Require transfer robustness under template mutations; reject if persistence falls below floor.
+- Deception: Enforce minimality/sufficiency stability across contexts; add long‑context tests.
+- Rollback: Keep per‑family rollback checkpoints in safety edits; practice smoke drills.
+
+<!-- END UPCOMING_VERSIONS -->

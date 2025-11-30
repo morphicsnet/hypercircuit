@@ -129,11 +129,9 @@ def filter_candidates(
     synergy_threshold: float,
     stability_score_min: float,
 ) -> List[Mapping[str, object]]:
-    """Filter candidates by thresholds and drop redundancy flagged."""
+    """Filter candidates by thresholds (mock: do not drop redundancy; dedup occurs later)."""
     out: List[Mapping[str, object]] = []
     for c in scored:
-        if c.get("redundancy_flag"):  # type: ignore[truthy-function]
-            continue
         if float(c.get("synergy_score", 0.0)) < synergy_threshold:  # type: ignore[arg-type]
             continue
         if float(c.get("stability_score", 0.0)) < stability_score_min:  # type: ignore[arg-type]

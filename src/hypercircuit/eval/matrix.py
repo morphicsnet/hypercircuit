@@ -159,9 +159,14 @@ def run_matrix_evaluation(
     families: Optional[Sequence[str]] = None,
     methods: Optional[Sequence[str]] = None,
     half_matrix: Optional[bool] = None,
+    remaining_only: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """
-    Evaluate a deterministic, half-sized (optional) matrix over (families x methods) and emit matrix_results.jsonl.
+    Evaluate a deterministic matrix over (families x methods).
+
+    Modes:
+      - Default: half-matrix parity=0 to produce matrix_results.jsonl
+      - remaining_only=True: half-matrix parity=1 to produce remaining_matrix_results.jsonl
 
     Returns a summary dict with coverage and top-line method medians.
     """
@@ -178,6 +183,11 @@ def run_matrix_evaluation(
         alpha=float(getattr(per, "alpha", 0.05) if per else 0.05),
         fdr=float(getattr(per, "fdr", 0.10) if per else 0.10),
     )
+
+    # Determine which parity to evaluate when half-matrix is on
+    target_parity = 0
+    if half:
+        target_parity = 1 if bool(remaining_only) else 0
 
     # Load artifacts
     events_path = stage_path(run_dir, "logs.jsonl")
@@ -198,7 +208,7 @@ def run_matrix_evaluation(
     for fam in fams:
         for m in meths:
             if half:
-                if _stable_parity(fam, m) != 0:
+                if _stable_parity(fam, m) != target_parity:
                     continue
             grid.append((fam, m))
 
@@ -290,9 +300,14 @@ def run_matrix_evaluation(
         )
 
     # Write results
-    out_path = stage_path(run_dir, "matrix_results.jsonl")
+    out_name = "matrix_results.jsonl"
+    kind = "matrix_results"
+    if half and bool(remaining_only):
+        out_name = "remaining_matrix_results.jsonl"
+        kind = "remaining_matrix_results"
+    out_path = stage_path(run_dir, out_name)
     save_jsonl(out_path, results)
-    log_artifact(out_path, kind="matrix_results", metadata={"cells": len(results)})
+    log_artifact(out_path, kind=kind, metadata={"cells": len(results)})
 
     # Aggregate summary
     configured_total = len(fams) * len(meths)

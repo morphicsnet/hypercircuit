@@ -12,3 +12,8 @@ surrogate:
   nonneg: true
   selection: aic
   interactions: 0
+
+  # Week 6 necessity toggles (mock)
+  necessity:
+    disable_higher_order: true
+    retrain_on_subset: false

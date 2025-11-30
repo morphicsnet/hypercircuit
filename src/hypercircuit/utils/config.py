@@ -82,6 +82,11 @@ class LoggingConfig(BaseModel):
     expected_event_density_range: List[float] = Field(default_factory=lambda: [3.0, 12.0])  # sanity band
     node_types: NodeTypeToggles = NodeTypeToggles()
 
+    # Week 7 expansion toggles
+    top_behaviors_only: bool = False
+    top_behaviors_families: Optional[List[str]] = None  # None => resolve later from discovery.week2_screening.top_families
+    layers_profile_24: Optional[List[int]] = None  # None => default to list(range(-24, 0))
+
     # Existing mock logger knobs
     tokens_per_sample: int = 8
     threshold: float = 0.5
@@ -126,6 +131,12 @@ class DictionaryConfig(BaseModel):
     families: Optional[List[str]] = None  # None => use discovery.week2_screening.top_families
 
 
+class NecessityConfig(BaseModel):
+    """Week 6 necessity toggles (mock/deterministic)."""
+    disable_higher_order: bool = True
+    retrain_on_subset: bool = False
+
+
 class SurrogateConfig(BaseModel):
     """Surrogate modeling configuration."""
     # Week 1 baselines
@@ -141,6 +152,35 @@ class SurrogateConfig(BaseModel):
     nonneg: bool = True
     interactions: int = 0
     selection: str = "aic"
+
+    # Week 6 necessity toggles (mock)
+    necessity: NecessityConfig = NecessityConfig()
+
+class SafetyEvalConfig(BaseModel):
+    """Week 5 safety evaluation defaults (mock/deterministic)."""
+    n_prompts_per_family: int = 400
+    n_seeds: int = 5
+    transfer_scale: float = 0.7
+    subset_tests: bool = True
+
+
+class Gate4RobustnessConfig(BaseModel):
+    """Gate 4 robustness evaluation knobs (mock/deterministic)."""
+    n_paraphrases: int = 2
+    n_adversarial: int = 2
+    seeds: int = 5
+
+
+class Gate4AcceptanceConfig(BaseModel):
+    """Gate 4 acceptance thresholds."""
+    necessity_drop_min: float = 0.10
+    seed_stability_min: float = 0.8
+    effect_persistence_min: float = 0.7
+
+
+class Gate4Config(BaseModel):
+    robustness: Gate4RobustnessConfig = Gate4RobustnessConfig()
+    acceptance: Gate4AcceptanceConfig = Gate4AcceptanceConfig()
 
 
 class CausalConfig(BaseModel):
@@ -160,14 +200,28 @@ class CausalConfig(BaseModel):
     n_prompts_per_cell: int = 200
     transfer_scale: float = 0.7
 
+    # Week 5 safety eval defaults
+    safety_eval: SafetyEvalConfig = SafetyEvalConfig()
+
+    # Week 6 Gate 4 config
+    gate4: Gate4Config = Gate4Config()
+
 
 class EditingConfig(BaseModel):
     """Safety editing configuration."""
-    # Week 1 baselines
-    scale: float = 0.3  # max_edit_scale baseline
+    # Week 1 baselines (kept for back-compat)
+    scale: float = 0.3
     clamp: Optional[float] = None
     rollback_delta: float = 0.05
     rollback_thresholds: RollbackThresholds = RollbackThresholds()
+
+    # Week 5 safety edit planning
+    max_edit_scale: float = 0.3
+    step_schedule: List[float] = Field(default_factory=lambda: [0.1, 0.2, 0.3])
+    benign_deg_pct_max: float = 0.5
+    specificity_min_ratio: float = 1.2
+    families: Optional[List[str]] = None
+    target_reduction_pct: float = 0.20
 
 
 class DatasetConfig(BaseModel):
@@ -179,6 +233,8 @@ class DatasetConfig(BaseModel):
     # Optional dataset-provided task metadata
     task_family: Optional[str] = None
     split: Optional[str] = None
+    # Week 7 overlay flag for per-family 24-layer expansion
+    top_behaviors: Optional[bool] = None
 
 
 # Week 4 matrix evaluation config
@@ -205,6 +261,53 @@ class MatrixConfig(BaseModel):
     per_cell: MatrixPerCellConfig = MatrixPerCellConfig()
 
 
+# Week 7 semantic labeling configuration
+class LabelingConfig(BaseModel):
+    """Semantic labeling finalization (mock/deterministic)."""
+    exemplars_top_k: int = 3
+    agreement_targets: Optional[Mapping[str, float]] = None  # e.g., {"kappa_min": 0.6}
+    drift_check_window: int = 1
+
+
+# Week 7 dashboards export configuration
+class DashboardConfig(BaseModel):
+    """Dashboard export toggles and filenames."""
+    include_ensembles: bool = True
+    include_labels: bool = True
+    include_summary: bool = True
+    out_ensembles: str = "dashboard_ensembles.json"
+    out_labels: str = "dashboard_labels.json"
+    out_summary: str = "dashboard_summary.json"
+
+
+# Week 8 release configuration
+class ReleaseAcceptanceRequirements(BaseModel):
+    """Acceptance requirements for release gating (set None to ignore a gate)."""
+    gate1_go: Optional[bool] = None
+    gate2_accept_all: Optional[bool] = None
+    gate3_accept_all: Optional[bool] = None
+    gate4_accept: Optional[bool] = None
+
+
+class ReleaseOutNames(BaseModel):
+    """Override filenames for Week 8 artifacts."""
+    frozen_dictionary: str = "ensemble_dictionary_frozen.json"
+    release_manifest: str = "release_manifest.json"
+    final_report: str = "final_report.json"
+    final_summary: str = "final_summary.md"
+    scaling_doc: str = "SCALING_RECOMMENDATION.md"
+
+
+class ReleaseConfig(BaseModel):
+    """Week 8 release pipeline configuration."""
+    snapshot_tag: str = "v1"
+    include_families: Optional[List[str]] = None
+    acceptance_requirements: ReleaseAcceptanceRequirements = ReleaseAcceptanceRequirements()
+    out_dir_names: ReleaseOutNames = ReleaseOutNames()
+    # Optional manifold/version alignment tag (display/provenance only)
+    manifold_version: Optional[str] = None
+
+
 class Config(BaseModel):
     """Top-level configuration across stages."""
     run: RunConfig = RunConfig()
@@ -216,6 +319,9 @@ class Config(BaseModel):
     editing: EditingConfig = EditingConfig()
     dataset: DatasetConfig = DatasetConfig()
     matrix: MatrixConfig = MatrixConfig()
+    labeling: LabelingConfig = LabelingConfig()
+    dashboard: DashboardConfig = DashboardConfig()
+    release: ReleaseConfig = ReleaseConfig()
 
 
 # ----------------------

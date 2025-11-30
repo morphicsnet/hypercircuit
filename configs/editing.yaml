@@ -5,3 +5,9 @@ editing:
   rollback_thresholds:
     benign_deg_pct: 0.5
     specificity_min_ratio: 1.2
+  max_edit_scale: 0.3
+  step_schedule: [0.1, 0.2, 0.3]
+  benign_deg_pct_max: 0.5
+  specificity_min_ratio: 1.2
+  target_reduction_pct: 0.20
+  families: ["sycophancy", "jailbreak", "deceptive_reasoning"]

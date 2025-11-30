@@ -5,3 +5,4 @@ dataset:
   variant: "tiny"
   task_family: jailbreak
   split: dev
+  top_behaviors: true

@@ -20,3 +20,21 @@ causal:
     ci_method: bootstrap
     alpha: 0.05
     fdr: 0.10
+
+  # Week 5 safety evaluation defaults (mock)
+  safety_eval:
+    n_prompts_per_family: 400
+    n_seeds: 5
+    transfer_scale: 0.7
+    subset_tests: true
+
+  # Week 6 Gate 4 evaluation (mock)
+  gate4:
+    robustness:
+      n_paraphrases: 2
+      n_adversarial: 2
+      seeds: 5
+    acceptance:
+      necessity_drop_min: 0.10
+      seed_stability_min: 0.8
+      effect_persistence_min: 0.7

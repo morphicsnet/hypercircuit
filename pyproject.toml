@@ -7,7 +7,7 @@ name = "hypercircuit"
 version = "0.1.0"
 description = "HYPERCIRCUIT framework skeleton: SAE-first interpretability workflow scaffolding."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.9"
 license = { text = "Apache-2.0" }
 authors = [{ name = "HYPERCIRCUIT Authors" }]
 dependencies = [
@@ -40,6 +40,10 @@ hypercircuit-run-discovery = "hypercircuit.cli.run_discovery:main"
 hypercircuit-run-surrogate = "hypercircuit.cli.run_surrogate:main"
 hypercircuit-run-causal-eval = "hypercircuit.cli.run_causal_eval:main"
 hypercircuit-run-edit-eval = "hypercircuit.cli.run_edit_eval:main"
+hypercircuit-run-week5-safety = "hypercircuit.cli.run_week5_safety:main"
+hypercircuit-run-week6-gate4 = "hypercircuit.cli.run_week6_gate4:main"
+hypercircuit-run-week7-labels-dash = "hypercircuit.cli.run_week7_labels_dash:main"
+hypercircuit-run-week8-release = "hypercircuit.cli.run_week8_release:main"
 
 [tool.setuptools]
 include-package-data = true
@@ -53,11 +57,11 @@ include = ["hypercircuit*"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py39"
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.9"
 warn_unused_configs = true
 ignore_missing_imports = true
 strict_optional = true

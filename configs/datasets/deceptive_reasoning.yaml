@@ -5,3 +5,4 @@ dataset:
   variant: "tiny"
   task_family: deceptive_reasoning
   split: dev
+  top_behaviors: true

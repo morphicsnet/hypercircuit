@@ -19,6 +19,9 @@ class ActivationLogger:
     Generates deterministic mock activation events across instrumented layers
     and node types. Event rates are calibrated to land within the configured
     expected density band when using the baseline logging.yaml.
+
+    Week 7:
+      - Adds optional 24-layer expansion for top families via config/overlays.
     """
 
     # Existing mock knobs (kept for back-compat)
@@ -42,6 +45,13 @@ class ActivationLogger:
         }
     )
 
+    # Week 7 toggles for 24-layer expansion
+    top_behaviors_only: bool = False
+    top_behaviors_families: List[str] = field(default_factory=list)
+    layers_profile_24: List[int] = field(default_factory=list)
+    dataset_family: str | None = None
+    dataset_top_behaviors: bool = False
+
     def _node_spaces(self) -> Dict[str, int]:
         """Mock sizes for each node type."""
         return {
@@ -54,31 +64,43 @@ class ActivationLogger:
     def _enabled_types(self) -> List[str]:
         return [k for k, v in self.node_types.items() if v]
 
-    def _target_p_event(self) -> float:
+    def _target_p_event(self, n_layers: int, n_types: int) -> float:
         """Set per-(layer,node_type) event probability targeting ~6 events/token overall."""
-        n_layers = max(1, len(self.instrumented_layers))
-        n_types = max(1, len(self._enabled_types()))
         target_events_per_token = 6.0
-        p = target_events_per_token / (n_layers * n_types)
+        p = target_events_per_token / (max(1, n_layers) * max(1, n_types))
         return max(1e-6, min(0.9, p))
 
     def _generate(self, n_samples: int) -> Tuple[List[Mapping[str, object]], Mapping[str, object]]:
         events: List[Mapping[str, object]] = []
-        counts_by_type: Dict[str, int] = {t: 0 for t in self._enabled_types()}
-        coverage_by_layer: Dict[int, int] = {L: 0 for L in self.instrumented_layers}
-
+        enabled = self._enabled_types()
+    
+        # Resolve effective layers with optional Week 7 expansion
+        layers: List[int] = list(self.instrumented_layers)
+        expand = False
+        if self.top_behaviors_only:
+            if self.dataset_top_behaviors:
+                expand = True
+            elif self.dataset_family and self.top_behaviors_families and (self.dataset_family in self.top_behaviors_families):
+                expand = True
+        if expand:
+            layers = list(self.layers_profile_24) if self.layers_profile_24 else list(range(-24, 0))
+    
+        counts_by_type: Dict[str, int] = {t: 0 for t in enabled}
+        coverage_by_layer: Dict[int, int] = {L: 0 for L in layers}
+    
         with seed_context(self.seed):
             # Constructed for realism; sampling below uses RNG directly
             _ = FakeSAEDictionary(n_features=self.n_features, sparsity=self.sparsity)
-
+    
             rng = np.random.default_rng(self.seed + 1337)
-            p_event = self._target_p_event()
             node_spaces = self._node_spaces()
-            enabled = self._enabled_types()
-
+            n_layers = max(1, len(layers))
+            n_types = max(1, len(enabled))
+            p_event = self._target_p_event(n_layers, n_types)
+    
             for s in range(n_samples):
                 for tok in range(self.tokens_per_sample):
-                    for L in self.instrumented_layers:
+                    for L in layers:
                         any_layer_event = False
                         for nt in enabled:
                             if rng.random() < p_event:
@@ -98,12 +120,12 @@ class ActivationLogger:
                                 any_layer_event = True
                         if any_layer_event:
                             coverage_by_layer[L] += 1
-
+    
             # Ensure non-zero per-node-type counts in mock mode
             if enabled:
                 for nt in enabled:
                     if counts_by_type.get(nt, 0) == 0:
-                        L = self.instrumented_layers[0]
+                        L = layers[0]
                         events.append(
                             {
                                 "sample_id": 0,
@@ -116,15 +138,15 @@ class ActivationLogger:
                         )
                         counts_by_type[nt] = 1
                         coverage_by_layer[L] += 1
-
+    
         tokens_logged = n_samples * self.tokens_per_sample
         total_events = sum(counts_by_type.values())
         events_per_token = total_events / max(1, tokens_logged)
         ept_by_type = {k: v / max(1, tokens_logged) for k, v in counts_by_type.items()}
-
-        covered_layers = sum(1 for L in self.instrumented_layers if coverage_by_layer.get(L, 0) > 0)
-        layer_coverage_fraction = covered_layers / max(1, len(self.instrumented_layers))
-
+    
+        covered_layers = sum(1 for L in layers if coverage_by_layer.get(L, 0) > 0)
+        layer_coverage_fraction = covered_layers / max(1, len(layers))
+    
         metrics: Dict[str, object] = {
             "events_per_token": float(events_per_token),
             "events_per_token_by_node_type": ept_by_type,
@@ -133,7 +155,7 @@ class ActivationLogger:
             "covered_layers_count": int(covered_layers),
             "total_events": int(total_events),
             "tokens_logged": int(tokens_logged),
-            "n_layers": int(len(self.instrumented_layers)),
+            "n_layers": int(len(layers)),
         }
         return events, metrics
 

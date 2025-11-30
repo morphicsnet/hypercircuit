@@ -32,7 +32,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         run_sec["run_id"] = p.name
     else:
         legacy = run_sec.get("run_dir")
-        if legacy and not run_sec.get("run_id"):
+        if legacy:
             lp = Path(legacy)
             run_sec["output_dir"] = str(lp.parent)
             run_sec["run_id"] = lp.name

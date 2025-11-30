@@ -14,6 +14,11 @@ logging:
     mlp_channels: true
     residual_dirs: true
 
+  # Week 7: optional 24-layer expansion for top families
+  top_behaviors_only: false
+  top_behaviors_families: ["sycophancy","jailbreak","deceptive_reasoning"]
+  layers_profile_24: [-24,-23,-22,-21,-20,-19,-18,-17,-16,-15,-14,-13,-12,-11,-10,-9,-8,-7,-6,-5,-4,-3,-2,-1]
+
   # Mock logger knobs used by ActivationLogger
   tokens_per_sample: 8
   threshold: 0.5

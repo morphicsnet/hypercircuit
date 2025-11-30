@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 import numpy as np
 
 from hypercircuit.utils.config import Config, stage_path
-from hypercircuit.utils.io import load_jsonl, write_json
+from hypercircuit.utils.io import load_jsonl, write_json, read_json
 from hypercircuit.utils.registry import log_artifact
 
 
@@ -95,9 +95,11 @@ def assemble_interim_report(
     run_dir: Path,
     matrix_path: Optional[Path] = None,
     seeds: Optional[Sequence[int]] = None,
+    robustness_summary_path: Optional[Path] = None,
 ) -> Dict[str, Any]:
     """
     Consolidate matrix_results.jsonl into interim_report.json with acceptance flags, FDR, and determinism checksums.
+    Optionally embeds robustness_summary.json if provided via robustness_summary_path.
 
     Writes:
       - interim_report.json under run_dir
@@ -219,6 +221,15 @@ def assemble_interim_report(
             "top_cells_by_family_md5": topagg_md5,
         },
     }
+
+    # Optional robustness summary embed
+    if robustness_summary_path is not None:
+        rpath = Path(robustness_summary_path)
+        if rpath.exists():
+            try:
+                report["robustness_summary"] = read_json(rpath)
+            except Exception:
+                report["robustness_summary"] = {"error": "failed_to_load"}
 
     out_path = stage_path(run_dir, "interim_report.json")
     write_json(out_path, report)

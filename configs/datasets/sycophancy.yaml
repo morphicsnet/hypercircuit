@@ -5,3 +5,4 @@ dataset:
   variant: "tiny"
   task_family: sycophancy
   split: dev
+  top_behaviors: true
