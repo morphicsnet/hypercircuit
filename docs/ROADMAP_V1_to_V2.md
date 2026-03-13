@@ -5,8 +5,9 @@ This document describes the approved plan to evolve Hypercircuit from the V1 sca
 ## Target architecture and principles
 
 The system is a layered pipeline with clear module boundaries:
-- Logging: deterministic activation/event logging and provenance.
+- Logging: deterministic mock logging and optional real-model activation capture (local HF).
 - Discovery: co‑activation mining, synergy and stability screening, candidate pruning.
+- Reconciliation: optional stable-feature alignment and consensus IDs.
 - Dictionary: ensemble selection and provenance with per‑family indices.
 - Surrogate: monotone combiner with calibration and cross‑validation.
 - Causal: ablations, transfers, and mock harness evaluation.
@@ -36,7 +37,7 @@ Retention and lifecycle:
 
 Governance:
 - All stage CLIs record config snapshots, seed lists, and determinism checksums in reports.
-- Only mock/deterministic pipelines are implemented; no external model calls are permitted.
+- Canonical event schema is versioned; manifests record model/tokenizer, feature space, and dataset provenance.
 
 ## Interfaces and contracts (overview)
 
@@ -74,6 +75,7 @@ Phase 2 — Week 5 Safety Edits and Gate 3 (this task)
 - Method: propose deterministic edit plans from surrogate sensitivities; simulate impact; staged application; monitoring loop with specificity ratio and benign degradation; rollback on breach; consolidated Gate 3 report.
 - Acceptance (Gate 3): harmful_rate_reduction ≥ target, benign_deg_pct ≤ threshold, specificity_ratio ≥ threshold; global accept only if all observed families pass.
 - Key risks: off‑target regressions; mitigated by control families, specificity metric floor, and rollback points.
+- CLI: `hypercircuit-run-week5-safety` (script wrapper: `scripts/run_week5_safety.py`).
 
 Phase 3 — Manifold and Circuit Abstraction (Weeks 6–7)
 - Deliverables: manifold snapshot artifacts, geodesic adjacency index, dynamic circuit graph snapshots.
@@ -96,7 +98,7 @@ Back‑compatibility:
 Progressive migration steps:
 - Introduce new steering modules (policies, monitor) and safety reporting under separate namespaces.
 - Add evaluate_safety_suite entry to the causal harness with mock implementations; wire monitor to call it.
-- Add Week 5 CLI and script wrapper; route registry wiring through start_run/log_artifact/finalize_run.
+- Add Week 5 CLI and script wrapper (`hypercircuit-run-week5-safety`, `scripts/run_week5_safety.py`); route registry wiring through start_run/log_artifact/finalize_run.
 - Update README with Roadmap and Week 5 quick start; add CONTRACTS_AND_SCHEMAS doc.
 
 Deprecations (none immediate):
@@ -118,11 +120,12 @@ Acceptance bars (mock defaults):
 ## Compute, storage, and scheduling
 
 Compute model:
-- CPU‑only, mock numeric workloads; no external model servers.
+- CPU‑only, mock numeric workloads by default; optional local HF inference for real-mode logging.
 - Seeded RNG for NumPy and Torch with context‑managed restoration.
 
 Storage:
 - JSON/JSONL artifacts only; schema tag embedded in JSON; size‑aware retention policy.
+- Additional manifests: events_manifest.json, candidates_manifest.json, calibration.json.
 - Consolidated families reports to minimize redundant per‑family artifacts.
 
 Scheduling:
@@ -167,5 +170,5 @@ Mitigations:
 - Add steering policies and monitoring modules; no changes to existing function signatures elsewhere.
 - Extend config with SafetyEditConfig under editing and safety_eval block under causal; defaults preserve V1 behavior.
 - Add evaluate_safety_suite in the causal harness and simulate_impact/apply_edit_plan in steering edits; previous compute_edit_map/apply_edits remain available.
-- Introduce Week 5 CLI and wrapper; registry stage name "week5_safety" aligns with prior stage naming.
+- Introduce Week 5 CLI and wrapper (`hypercircuit-run-week5-safety`, `scripts/run_week5_safety.py`); registry stage name \"week5_safety\" aligns with prior stage naming.
 - README gains a Roadmap section and Week 5 quick start; docs directory includes ROADMAP_V1_to_V2 and CONTRACTS_AND_SCHEMAS.

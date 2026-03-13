@@ -116,12 +116,15 @@ def compute_provenance(
     token_cov = {"window_span": int(entry.get("window_span", 0))} if "window_span" in entry else None
 
     return {
+        "candidate_id": entry.get("candidate_id"),
         "id": pid,
         "members": members,
-        "size": int(entry.get("size", len(members))),
+        "size": int(entry.get("size", entry.get("arity", len(members)))),
+        "arity": int(entry.get("arity", entry.get("size", len(members)))),
         "synergy_score": float(entry.get("synergy_score", 0.0)),
         "stability_score": float(entry.get("stability_score", 0.0)),
         "weighted_support": float(entry.get("weighted_support", 0.0)),
+        "support_count": int(entry.get("support_count", entry.get("support", 0))),
         "family": family,
         "split": split,
         "run_id": run_id,

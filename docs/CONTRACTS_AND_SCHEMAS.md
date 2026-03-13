@@ -2,6 +2,10 @@
 
 This document consolidates the core data contracts and prose schemas underpinning the Hypercircuit pipeline. It focuses on stable shapes, field meanings, provenance, determinism, and retention. All contracts are mock-friendly and deterministic. No external model calls are assumed.
 
+Operational notes:
+- CLI entry points are exposed via console scripts (for example, `hypercircuit-run-log`, `hypercircuit-run-week5-safety`).
+- Artifacts are written under `runs/<run_id>/` by default (configurable via `run.output_dir`).
+
 Sections:
 - Feature activation logs (temporal spike sequences)
 - Candidate hyperedges (co-activation, synergy, stability, windows)
@@ -17,22 +21,33 @@ Purpose:
 - Capture instrumented feature events per sample with minimal yet sufficient provenance for downstream mining, stability checks, and synthetic evaluation.
 
 Prose schema:
-- One record per event or per-sample bundle (implementation may choose either shape; both serialize to JSONL).
-- Fields:
+- One record per event (canonical event stream).
+- Required canonical fields:
+  - schema_version: string, event schema version.
+  - run_id: string, run identifier.
+  - source_kind: mock | hf_local | api_trace | posthoc_import | hardware_capture.
+  - feature_space_id: string, feature space identifier.
+  - feature_space_version: string, feature space version.
   - sample_id: integer, stable per dataset ordering.
+  - sequence_id (or doc_id): integer, stable sequence/document identifier.
   - token_index: integer, position within the sample.
-  - node_type: string label (e.g., sae_features, attn_heads).
   - layer: integer or signed index (negative indicates backward-from-end convention).
-  - active: list of feature indices that fired at this token (optional for per-event shape if exactly one).
-  - window_index: integer, derived from token_index and configured window length.
-  - event_intensity: float in a normalized band (mock); optional.
-  - seed: integer, active seed recorded for determinism.
-  - created_at: ISO 8601 string; informational.
-  - provenance: minimal structure with dataset name, split, and instrumentation thresholds summary.
+  - node_type: string label (e.g., sae_features, attn_heads).
+  - node_id: integer feature index.
+  - value: float activation value (mock uses a constant).
+  - step_index: integer token step for ordering.
+- Identity lineage fields:
+  - dictionary_id, dictionary_version, dictionary_type.
+  - feature_origin_layer.
+  - member_key: canonical member id (feature_space_id:layer:node_type:node_id).
+  - feature_key: canonical feature id (includes feature_space_version and lineage).
+- Optional tags:
+  - task_family, prompt_family, split, label, capability_tag, safety_tag.
 - Determinism:
   - Event density is controlled by configuration thresholds; seeds fix any randomized selections (mock).
 - Storage:
-  - JSONL file with one mapping per line; total size constrained by expected event density band.
+  - JSONL file with one mapping per line.
+  - Accompanying `events_manifest.json` records schema version, feature space, model/tokenizer, and dataset provenance.
 
 ## 2) Candidate hyperedges (co-activation, synergy, stability, windows)
 
@@ -41,22 +56,34 @@ Purpose:
 
 Prose schema:
 - One JSONL record per candidate with:
-  - id: stable string derived from family, members, and window span (md5 or equivalent).
-  - family: string task family identifier (e.g., sycophancy, jailbreak).
-  - members: ordered list of feature identifiers or hashed labels; order is stable for determinism.
-  - size: integer cardinality (2 or 3 in mock).
-  - support: integer global support count.
+  - candidate_id: stable string derived from members and candidate_type.
+  - candidate_type: string (coactivation by default).
+  - members: ordered list of member keys; order is stable for determinism.
+  - arity: integer cardinality (2 or 3 in mock).
+  - support_count: integer global support count.
   - weighted_support: float rank-weighted support (monotone in support).
   - synergy_score: float, candidate score minus max proper-subset score, floored at zero.
   - stability_score: float in [0,1], rank-correlation-based across replicates; optional multi-replicate variant.
   - window_span: integer temporal span used for co-activation within windowing.
-  - replicate_partitioning: brief description of how replicates are formed (even/odd or hash modulo k).
-  - thresholds: snapshot of discovery thresholds at time of mining (for audit).
-  - provenance_paths: list of strings referencing source logs and prior reports.
-  - created_at: ISO 8601 string.
-- Acceptance flags (informational in mock):
-  - after_synergy: boolean whether synergy threshold was met.
-  - after_stability: boolean whether stability threshold was met.
+  - formation_rule: string identifier of the mining algorithm.
+  - scores: {coactivation_score, synergy_score, stability_score, calibration_score, causal_score, final_rank_score}.
+- Back-compat fields are preserved in mock (size/support).
+- Accompanying `candidates_manifest.json` records member granularity and score bundle availability.
+
+## 2.5) Calibration + reconciliation artifacts
+
+Purpose:
+- Persist real-path calibration thresholds and stable-feature reconciliation outputs for reproducibility.
+
+Artifacts:
+- `calibration.json`:
+  - dataset_slice: counts of events and candidates used for calibration.
+  - thresholds: discovery thresholds explored or selected.
+  - score_distributions: quantiles of weighted_support, synergy_score, stability_score.
+- `feature_alignment.json`:
+  - mapping from member_key → stable_node_id (identity for now).
+- `consensus_features.json`:
+  - consensus feature list (identity passthrough by default).
 
 ## 3) Dynamic circuit graph and frozen snapshot artifacts
 

@@ -7,7 +7,7 @@ from typing import List, Optional
 import numpy as np
 
 from hypercircuit.steering.edits import compute_edit_map, apply_edits
-from hypercircuit.utils.config import Config, load_config, stage_path
+from hypercircuit.utils.config import Config, load_config, stage_path, apply_legacy_run_dir
 from hypercircuit.utils.io import load_jsonl, read_json, write_json
 from hypercircuit.utils.registry import start_run, log_artifact, finalize_run
 
@@ -31,11 +31,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         run_sec["output_dir"] = str(p.parent)
         run_sec["run_id"] = p.name
     else:
-        legacy = run_sec.get("run_dir")
-        if legacy:
-            lp = Path(legacy)
-            run_sec["output_dir"] = str(lp.parent)
-            run_sec["run_id"] = lp.name
+        apply_legacy_run_dir(run_sec)
 
     run_id, run_dir = start_run(cfg_dict, stage_name="editing", config_paths=args.config)
 

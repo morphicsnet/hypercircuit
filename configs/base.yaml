@@ -7,6 +7,7 @@ run:
   model_tag: "debug"
   task_family: null
   split: "dev"
+  intent: "dev"
   # Legacy knobs (still honored by CLIs as fallback)
   seed: 0
   run_dir: "runs/mock"
@@ -18,14 +19,47 @@ dataset:
   n_samples: 64
   n_features: 8
   variant: "tiny"
+  source: "mock"
 
 logging:
+  mode: "mock"
+  member_granularity: "node_type"
+  source_kind: "mock"
   # Mock logger knobs used by ActivationLogger
   tokens_per_sample: 8
   threshold: 0.5
   hysteresis: 0.05
   sparsity: 0.1
   storage: jsonl
+
+model:
+  hf_model: null
+  device: "cpu"
+  dtype: "float32"
+  batch_size: 4
+  max_length: 256
+  layers: null
+  activation_kind: "residual"
+
+sae:
+  format: "safetensors"
+  path: null
+  layer_map: null
+  top_k: 16
+  min_activation: 0.0
+  dictionary_id: null
+  dictionary_version: null
+  dictionary_type: "sae"
+  feature_space_id: null
+  feature_space_version: "v0"
+
+reconciliation:
+  enabled: false
+  method: "identity"
+  out_alignment: "feature_alignment.json"
+  out_consensus: "consensus_features.json"
+  out_events: "events_reconciled.jsonl"
+  out_manifest: "events_reconciled_manifest.json"
 
 discovery:
   # Back-compat knobs used by scaffolding

@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-from hypercircuit.utils.config import Config, load_config, stage_path
+from hypercircuit.utils.config import Config, load_config, stage_path, apply_legacy_run_dir
 from hypercircuit.utils.io import load_jsonl, save_jsonl, write_json
 from hypercircuit.utils.registry import finalize_run, log_artifact, start_run
 from hypercircuit.steering.policies import apply_edit_schedule, propose_edit_plan, rollback_point
@@ -63,11 +63,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         run_sec["output_dir"] = str(p.parent)
         run_sec["run_id"] = p.name
     else:
-        legacy = run_sec.get("run_dir")
-        if legacy:
-            lp = Path(legacy)
-            run_sec["output_dir"] = str(lp.parent)
-            run_sec["run_id"] = lp.name
+        apply_legacy_run_dir(run_sec)
 
     # Prefer dataset metadata (informational)
     ds = cfg.dataset

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Mapping, Optional, Tuple
 
 from .io import write_json, append_jsonl
+from .provenance import hash_json, dependency_snapshot
 
 # Simple in-process registry state (single-run context)
 _CURRENT: Optional["RunContext"] = None
@@ -90,6 +91,8 @@ def start_run(config_dict: Mapping[str, Any], stage_name: str, config_paths: Opt
         "package": "hypercircuit",
     }
     git_sha = _best_effort_git_sha(Path("."))
+    cfg_checksum = hash_json(config_dict) if isinstance(config_dict, Mapping) else None
+    deps_snapshot = dependency_snapshot(Path("."))
 
     manifest = {
         "run_id": run_id,
@@ -104,6 +107,11 @@ def start_run(config_dict: Mapping[str, Any], stage_name: str, config_paths: Opt
         "git_sha": git_sha,
         "status": "running",
         "summary": {},
+        "provenance": {
+            "config_checksum": cfg_checksum,
+            "dependency_snapshot": deps_snapshot,
+            "run_intent": run_cfg.get("intent"),
+        },
     }
     write_json(manifest_path, manifest)
 
@@ -137,8 +145,12 @@ def log_artifact(path: Path | str, kind: str, metadata: Optional[Mapping[str, An
     append_jsonl(_CURRENT.artifacts_path, [rec])
 
 
-def finalize_run(status: str, metrics_dict: Optional[Mapping[str, Any]] = None) -> None:
-    """Update manifest with final status and summary metrics."""
+def finalize_run(
+    status: str,
+    metrics_dict: Optional[Mapping[str, Any]] = None,
+    manifest_updates: Optional[Mapping[str, Any]] = None,
+) -> None:
+    """Update manifest with final status, summary metrics, and optional updates."""
     if _CURRENT is None:
         raise RuntimeError("No active run context. Call start_run() first.")
     try:
@@ -155,4 +167,12 @@ def finalize_run(status: str, metrics_dict: Optional[Mapping[str, Any]] = None) 
             "summary": dict(metrics_dict or {}),
         }
     )
+    if manifest_updates:
+        for k, v in dict(manifest_updates).items():
+            if isinstance(v, Mapping) and isinstance(manifest.get(k), Mapping):
+                merged = dict(manifest.get(k, {}))
+                merged.update(dict(v))
+                manifest[k] = merged
+            else:
+                manifest[k] = v
     write_json(_CURRENT.manifest_path, manifest)

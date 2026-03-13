@@ -1,0 +1,169 @@
+{
+  "_schema_version": "0.1.0",
+  "n_candidates_total": 6,
+  "n_candidates_size2": 6,
+  "n_candidates_size3": 0,
+  "n_passed_synergy": 0,
+  "n_passed_stability": 0,
+  "counts": {
+    "n_candidates_total": 6,
+    "n_candidates_size2": 6,
+    "n_candidates_size3": 0,
+    "n_passed_synergy": 0,
+    "n_passed_stability": 0
+  },
+  "storage": {
+    "input_bytes": 1457270,
+    "output_bytes": 3423
+  },
+  "acceptance": {
+    "flags": {
+      "counts_ok": false,
+      "storage_ok": true
+    },
+    "notes": "Week 1 mock acceptance is informational; thresholds configurable in configs/discovery.yaml."
+  },
+  "top_exemplars": [
+    {
+      "members": [
+        "mlp_channels",
+        "sae_features"
+      ],
+      "arity": 2,
+      "size": 2,
+      "support_count": 231,
+      "support": 231,
+      "weighted_support": 0.1323024054982818,
+      "synergy_score": 0.0,
+      "stability_score": 0.4285714285714286,
+      "scores": {
+        "coactivation_score": 0.1323024054982818,
+        "synergy_score": 0.0,
+        "stability_score": 0.4285714285714286,
+        "calibration_score": null,
+        "causal_score": null,
+        "final_rank_score": 0.1323024054982818
+      }
+    },
+    {
+      "members": [
+        "attn_heads",
+        "residual_dirs"
+      ],
+      "arity": 2,
+      "size": 2,
+      "support_count": 213,
+      "support": 213,
+      "weighted_support": 0.12199312714776632,
+      "synergy_score": 0.0,
+      "stability_score": 0.4285714285714286,
+      "scores": {
+        "coactivation_score": 0.12199312714776632,
+        "synergy_score": 0.0,
+        "stability_score": 0.4285714285714286,
+        "calibration_score": null,
+        "causal_score": null,
+        "final_rank_score": 0.12199312714776632
+      }
+    },
+    {
+      "members": [
+        "attn_heads",
+        "mlp_channels"
+      ],
+      "arity": 2,
+      "size": 2,
+      "support_count": 212,
+      "support": 212,
+      "weighted_support": 0.12142038946162657,
+      "synergy_score": 0.0,
+      "stability_score": 0.4285714285714286,
+      "scores": {
+        "coactivation_score": 0.12142038946162657,
+        "synergy_score": 0.0,
+        "stability_score": 0.4285714285714286,
+        "calibration_score": null,
+        "causal_score": null,
+        "final_rank_score": 0.12142038946162657
+      }
+    },
+    {
+      "members": [
+        "mlp_channels",
+        "residual_dirs"
+      ],
+      "arity": 2,
+      "size": 2,
+      "support_count": 207,
+      "support": 207,
+      "weighted_support": 0.11855670103092783,
+      "synergy_score": 0.0,
+      "stability_score": 0.4285714285714286,
+      "scores": {
+        "coactivation_score": 0.11855670103092783,
+        "synergy_score": 0.0,
+        "stability_score": 0.4285714285714286,
+        "calibration_score": null,
+        "causal_score": null,
+        "final_rank_score": 0.11855670103092783
+      }
+    },
+    {
+      "members": [
+        "residual_dirs",
+        "sae_features"
+      ],
+      "arity": 2,
+      "size": 2,
+      "support_count": 201,
+      "support": 201,
+      "weighted_support": 0.11512027491408934,
+      "synergy_score": 0.0,
+      "stability_score": 0.4285714285714286,
+      "scores": {
+        "coactivation_score": 0.11512027491408934,
+        "synergy_score": 0.0,
+        "stability_score": 0.4285714285714286,
+        "calibration_score": null,
+        "causal_score": null,
+        "final_rank_score": 0.11512027491408934
+      }
+    },
+    {
+      "members": [
+        "attn_heads",
+        "sae_features"
+      ],
+      "arity": 2,
+      "size": 2,
+      "support_count": 198,
+      "support": 198,
+      "weighted_support": 0.1134020618556701,
+      "synergy_score": 0.0,
+      "stability_score": 0.4285714285714286,
+      "scores": {
+        "coactivation_score": 0.1134020618556701,
+        "synergy_score": 0.0,
+        "stability_score": 0.4285714285714286,
+        "calibration_score": null,
+        "causal_score": null,
+        "final_rank_score": 0.1134020618556701
+      }
+    }
+  ],
+  "thresholds": {
+    "min_weighted_support": 0.01,
+    "synergy_threshold": 0.0,
+    "stability_score_min": 0.5,
+    "dedup_jaccard_min": 0.5,
+    "caps": {
+      "size2": 1000,
+      "size3": 300,
+      "temporal_span": 3
+    }
+  },
+  "run": {
+    "task_family": "synthetic_parity",
+    "split": "dev"
+  }
+}

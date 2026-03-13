@@ -111,12 +111,22 @@ def score_candidates(
         subset_best = _max_subset_ws(members, ws_index)
         synergy = max(0.0, ws - subset_best)
         redundancy = ws <= subset_best + 1e-12
+        base_scores = dict(c.get("scores") or {})
+        base_scores.setdefault("coactivation_score", float(c.get("weighted_support", 0.0)))
+        base_scores["synergy_score"] = float(synergy)
+        base_scores["stability_score"] = float(global_stability)
+        base_scores.setdefault("calibration_score", None)
+        base_scores.setdefault("causal_score", None)
+        # Minimal final rank score (mock): weighted_support + synergy
+        base_scores["final_rank_score"] = float(base_scores["coactivation_score"]) + float(base_scores["synergy_score"])
+
         ann.append(
             {
                 **c,
                 "synergy_score": float(synergy),
                 "redundancy_flag": bool(redundancy),
                 "stability_score": float(global_stability),
+                "scores": base_scores,
             }
         )
     # Deterministic ordering

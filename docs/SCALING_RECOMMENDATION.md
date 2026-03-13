@@ -1,6 +1,6 @@
 # Scaling Recommendation Template (V1 → V1.5 → V2)
 
-This template is programmatically updated by the Week 8 release CLI. The CLI writes a deterministic, metrics‑aware version under each run directory at:
+This template is programmatically updated by the Week 8 release CLI (`hypercircuit-run-week8-release`). The CLI writes a deterministic, metrics-aware version under each run directory at:
 - runs/<run_id>/docs/SCALING_RECOMMENDATION.md
 
 Snapshot
@@ -18,6 +18,7 @@ Gate acceptance (V1 status)
 Budgets (mock/deterministic)
 - Storage (current run artifacts): {{STORAGE_MB}} MB
 - Compute envelope (stub): deterministic-mock
+  - Optional real-mode logging requires local HF models + SAE dictionaries.
 
 Observed outcomes and gaps
 - {{REASONS_MULTILINE}}
@@ -27,6 +28,7 @@ Migration steps
   - Expand evaluation coverage to all configured families; address failing gates from reasons.
   - Tighten stability/necessity thresholds as needed; re-run Gate 4 to confirm persistence.
   - Grow dashboard surface: add per-family drill-down and error budgets.
+  - Adopt calibration artifacts (`calibration.json`) and manifest-level compatibility checks.
 - V1.5 → V2:
   - Scale dataset variants and seeds; increase CV folds for surrogates.
   - Add regression guardrails: freeze API + manifests, enforce bundle checksums in CI.

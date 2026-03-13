@@ -106,7 +106,7 @@ def _select_ensembles_for_family(
         return float(pr.get("cv_score", 0.0)) if pr else 0.0
 
     if method == "pairwise_baseline":
-        fam_ens = [e for e in fam_ens if int(e.get("size", 0)) == 2]
+        fam_ens = [e for e in fam_ens if int(e.get("arity", e.get("size", 0))) == 2]
         fam_ens.sort(key=lambda e: -_score(e))
         return fam_ens[:top_k]
     # other methods: general top-k per family
@@ -269,7 +269,7 @@ def run_matrix_evaluation(
                 d = _ensemble_delta(eid, members, method, scale, seed)
                 # Make pairwise_baseline more conservative if not exactly size-2
                 if method == "pairwise_baseline":
-                    if int(e.get("size", len(members))) != 2:
+                    if int(e.get("arity", e.get("size", len(members)))) != 2:
                         d *= 0.5
                 deltas.append(d)
             # aggregate across ensembles

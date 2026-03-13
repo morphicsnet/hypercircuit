@@ -65,6 +65,7 @@ class RunConfig(BaseModel):
     model_tag: Optional[str] = None
     task_family: Optional[str] = None
     split: Optional[str] = None
+    intent: Optional[str] = None  # demo | dev | calibration | benchmark | beta | research
 
     # Legacy/back-compat fields (unused by new registry, but safe to keep)
     seed: int = 0
@@ -75,6 +76,10 @@ class RunConfig(BaseModel):
 
 class LoggingConfig(BaseModel):
     """Activation logging stage configuration."""
+    mode: str = "mock"  # mock | real
+    member_granularity: str = "node_type"  # node_type | node_id | group
+    source_kind: Optional[str] = None  # mock | hf_local | api_trace | posthoc_import | hardware_capture
+    schema_version: str = "0.2.0"
     # New instrumentation knobs
     instrumented_layers: List[int] = Field(default_factory=lambda: list(range(-12, 0)))
     token_window: int = 160
@@ -93,6 +98,41 @@ class LoggingConfig(BaseModel):
     hysteresis: float = 0.05
     sparsity: float = 0.1
     storage: str = "jsonl"  # "jsonl" (Parquet stubbed in utils.io)
+
+
+class ActivationTargetSpec(BaseModel):
+    """Typed activation target specification."""
+    target_kind: str = "residual"  # residual | mlp_out | attn_out | attn_pattern | router_logits
+    layer_index: int = -1
+    subcomponent: Optional[str] = None
+    pre_post_norm: Optional[str] = None
+    token_pooling: Optional[str] = None
+
+
+class ModelConfig(BaseModel):
+    """Real-model configuration for activation capture."""
+    hf_model: Optional[str] = None
+    device: str = "cpu"
+    dtype: str = "float32"
+    batch_size: int = 4
+    max_length: int = 256
+    layers: Optional[List[int]] = None
+    activation_kind: str = "residual"  # legacy
+    targets: Optional[List[ActivationTargetSpec]] = None
+
+
+class SAEConfig(BaseModel):
+    """SAE dictionary configuration for real feature extraction."""
+    format: str = "safetensors"
+    path: Optional[str] = None
+    layer_map: Optional[Mapping[int, str]] = None
+    top_k: int = 16
+    min_activation: float = 0.0
+    dictionary_id: Optional[str] = None
+    dictionary_version: Optional[str] = None
+    dictionary_type: str = "sae"
+    feature_space_id: Optional[str] = None
+    feature_space_version: str = "v0"
 
 
 class Week2ScreeningConfig(BaseModel):
@@ -129,6 +169,16 @@ class DictionaryConfig(BaseModel):
     exemplars_top_k: int = 3
     min_passed_per_top_family: int = 5  # mock threshold
     families: Optional[List[str]] = None  # None => use discovery.week2_screening.top_families
+
+
+class ReconciliationConfig(BaseModel):
+    """Stable-feature reconciliation configuration (optional)."""
+    enabled: bool = False
+    method: str = "identity"  # identity | consensus | external
+    out_alignment: str = "feature_alignment.json"
+    out_consensus: str = "consensus_features.json"
+    out_events: str = "events_reconciled.jsonl"
+    out_manifest: str = "events_reconciled_manifest.json"
 
 
 class NecessityConfig(BaseModel):
@@ -230,8 +280,21 @@ class DatasetConfig(BaseModel):
     n_samples: int = 64
     n_features: int = 8
     variant: Optional[str] = "tiny"
+    # Real-data options
+    source: str = "mock"  # mock | hf | jsonl
+    hf_name: Optional[str] = None
+    hf_split: str = "train"
+    text_field: str = "text"
+    label_field: Optional[str] = None
+    path: Optional[str] = None
+    max_samples: Optional[int] = None
+    cache_dir: Optional[str] = None
+    sequence_field: Optional[str] = None
     # Optional dataset-provided task metadata
     task_family: Optional[str] = None
+    prompt_family: Optional[str] = None
+    capability_tag: Optional[str] = None
+    safety_tag: Optional[str] = None
     split: Optional[str] = None
     # Week 7 overlay flag for per-family 24-layer expansion
     top_behaviors: Optional[bool] = None
@@ -312,8 +375,11 @@ class Config(BaseModel):
     """Top-level configuration across stages."""
     run: RunConfig = RunConfig()
     logging: LoggingConfig = LoggingConfig()
+    model: ModelConfig = ModelConfig()
+    sae: SAEConfig = SAEConfig()
     discovery: DiscoveryConfig = DiscoveryConfig()
     dictionary: DictionaryConfig = DictionaryConfig()
+    reconciliation: ReconciliationConfig = ReconciliationConfig()
     surrogate: SurrogateConfig = SurrogateConfig()
     causal: CausalConfig = CausalConfig()
     editing: EditingConfig = EditingConfig()
@@ -399,3 +465,22 @@ def ensure_dir(path: Path) -> None:
 def stage_path(run_dir: Path, filename: str) -> Path:
     """Helper to construct an artifact path under a run directory."""
     return run_dir / filename
+
+
+def apply_legacy_run_dir(run_sec: MutableMapping[str, Any]) -> None:
+    """
+    Apply legacy run_dir override when explicitly set.
+
+    If run_dir is the default ("runs/mock") and run_id is already set,
+    prefer run_id. If run_dir differs from the default, treat it as an explicit
+    override and derive output_dir/run_id from it.
+    """
+    legacy = run_sec.get("run_dir")
+    if not legacy:
+        return
+    legacy_str = str(legacy)
+    default_legacy = str(Path("runs") / "mock")
+    if (not run_sec.get("run_id")) or (legacy_str != default_legacy):
+        lp = Path(legacy)
+        run_sec["output_dir"] = str(lp.parent)
+        run_sec["run_id"] = lp.name

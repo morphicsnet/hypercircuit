@@ -151,7 +151,8 @@ def _filter_and_sort_entries(
                 "id": eid,
                 "family": str(e.get("family")),
                 "members": list(mem),
-                "size": int(e.get("size", len(mem))),
+                "size": int(e.get("size", e.get("arity", len(mem)))),
+                "arity": int(e.get("arity", e.get("size", len(mem)))),
                 "synergy_score": float(e.get("synergy_score", 0.0)),
                 "stability_score": float(e.get("stability_score", 0.0)),
             }

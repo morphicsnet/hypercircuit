@@ -6,9 +6,12 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 import numpy as np
 
 from hypercircuit.surrogate.model import MonotoneCombiner
+from hypercircuit.logging.schema import EVENT_SCHEMA_VERSION
+from hypercircuit.utils.compat import assert_schema_version, assert_feature_space_compat
 from hypercircuit.utils.config import Config, stage_path
-from hypercircuit.utils.io import load_jsonl, save_jsonl, write_json
+from hypercircuit.utils.io import load_jsonl, save_jsonl, write_json, read_json
 from hypercircuit.utils.seed import active_seed, seed_context
+from hypercircuit.utils.ids import member_key_from_event
 
 
 def _median(vals: List[float]) -> float:
@@ -91,6 +94,7 @@ def assemble_mock_training_data(
     ensembles: Sequence[Mapping[str, Any]],
     events: Sequence[Mapping[str, Any]],
     seed: Optional[int] = 0,
+    member_granularity: str = "node_type",
 ) -> Dict[str, Dict[str, Any]]:
     """
     Build per-ensemble training data from logging events (mock).
@@ -99,16 +103,17 @@ def assemble_mock_training_data(
       - Features: one column per member; X[sample, j]=1 if member event present for that sample.
       - Target: y = sum_j X[:, j] + small seed-bound noise (deterministic via seed_context()).
     """
-    # Precompute per-sample presence sets by node_type
+    # Precompute per-sample presence sets by member key
     by_sample: Dict[int, set] = {}
     sample_ids: set[int] = set()
     for ev in events:
         s = int(ev.get("sample_id", 0))
         sample_ids.add(s)
-        # Prefer structured logging events with node_type
-        nt = ev.get("node_type")
-        if nt is not None:
-            by_sample.setdefault(s, set()).add(str(nt))
+        try:
+            mk = member_key_from_event(ev, granularity=member_granularity)
+            by_sample.setdefault(s, set()).add(str(mk))
+        except Exception:
+            pass
         # Back-compat: ignore 'active' legacy format here (dictionary members are node_type strings)
 
     n_samples = (max(sample_ids) + 1) if sample_ids else 0
@@ -135,7 +140,8 @@ def assemble_mock_training_data(
                 "y": y,
                 "family": e.get("family"),
                 "members": members,
-                "size": int(e.get("size", len(members))),
+                "size": int(e.get("size", e.get("arity", len(members)))),
+                "arity": int(e.get("arity", e.get("size", len(members)))),
             }
     return data
 
@@ -261,8 +267,29 @@ def fit_surrogates_for_family(
         ensembles = [e for e in ensembles if e.get("family") in fam_set]
 
     # Build per-ensemble training data (reuse events for all)
+    member_granularity = cfg.logging.member_granularity
+    manifest_path = events_path.parent / "events_manifest.json"
+    if not manifest_path.exists():
+        alt_manifest = events_path.parent / "events_reconciled_manifest.json"
+        if alt_manifest.exists():
+            manifest_path = alt_manifest
+    if manifest_path.exists():
+        manifest = read_json(manifest_path)
+        assert_schema_version(manifest, key="schema_version", supported=[EVENT_SCHEMA_VERSION])
+        assert_feature_space_compat(
+            manifest,
+            expected_id=cfg.sae.feature_space_id,
+            expected_version=cfg.sae.feature_space_version,
+        )
+        member_granularity = str(manifest.get("member_granularity") or member_granularity)
     seed_val = active_seed(cfg.run.seeds, stage_idx=0)
-    data_by_eid = assemble_mock_training_data(run_dir=run_dir, ensembles=ensembles, events=events, seed=seed_val)
+    data_by_eid = assemble_mock_training_data(
+        run_dir=run_dir,
+        ensembles=ensembles,
+        events=events,
+        seed=seed_val,
+        member_granularity=member_granularity,
+    )
 
     # Train one surrogate per ensemble with CV + calibration
     recs: List[Dict[str, Any]] = []

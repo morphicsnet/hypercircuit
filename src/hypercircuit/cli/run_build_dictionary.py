@@ -4,12 +4,13 @@ import argparse
 from pathlib import Path
 from typing import Dict, List, Mapping, Optional, Tuple
 
-from hypercircuit.utils.config import Config, load_config
+from hypercircuit.utils.config import Config, load_config, apply_legacy_run_dir
 from hypercircuit.utils.registry import start_run, log_artifact, finalize_run
 from hypercircuit.utils.seed import active_seed
 from hypercircuit.discovery.reporting import load_candidates_for_family
 from hypercircuit.dictionary.builder import build_ensemble_dictionary
 from hypercircuit.dashboards.export import export_dictionary
+from hypercircuit.utils.failures import classify_exception
 
 
 def _parse(argv: Optional[List[str]] = None) -> argparse.Namespace:
@@ -54,11 +55,7 @@ def _prepare_run(cfg: Config, args: argparse.Namespace) -> Tuple[Dict, Path]:
         run_sec["output_dir"] = str(p.parent)
         run_sec["run_id"] = p.name
     else:
-        legacy = run_sec.get("run_dir")
-        if legacy and not run_sec.get("run_id"):
-            lp = Path(legacy)
-            run_sec["output_dir"] = str(lp.parent)
-            run_sec["run_id"] = lp.name
+        apply_legacy_run_dir(run_sec)
 
     # Thread dataset metadata into run metadata if present
     ds = cfg.dataset
@@ -78,73 +75,83 @@ def main(argv: Optional[List[str]] = None) -> None:
     run_meta = cfg_dict.get("run", {})
     run_base = Path(run_meta.get("output_dir") or "runs")
 
-    # Resolve families
-    families: List[str]
-    if args.families:
-        families = list(args.families)
-    elif cfg.dictionary.families:
-        families = list(cfg.dictionary.families)  # type: ignore[arg-type]
-    else:
-        families = list(cfg.discovery.week2_screening.top_families)
+    try:
+        # Resolve families
+        families: List[str]
+        if args.families:
+            families = list(args.families)
+        elif cfg.dictionary.families:
+            families = list(cfg.dictionary.families)  # type: ignore[arg-type]
+        else:
+            families = list(cfg.discovery.week2_screening.top_families)
 
-    # Load latest discovery outputs per family
-    inputs_by_family: Dict[str, Mapping[str, object]] = {}
-    resolved: List[str] = []
-    for fam in families:
-        pack = load_candidates_for_family(run_base, fam, split=None)
-        if not pack:
-            # Skip if discovery artifacts missing for this family
-            continue
-        inputs_by_family[fam] = {
-            "candidates": pack.get("candidates", []),
-            "split": pack.get("split"),
-            "run_id": pack.get("run_id"),
-            "source_artifact_paths": pack.get("source_artifact_paths", []),
-            "discovered_at": pack.get("discovered_at"),
-        }
-        resolved.append(fam)
+        # Load latest discovery outputs per family
+        inputs_by_family: Dict[str, Mapping[str, object]] = {}
+        resolved: List[str] = []
+        for fam in families:
+            pack = load_candidates_for_family(run_base, fam, split=None)
+            if not pack:
+                # Skip if discovery artifacts missing for this family
+                continue
+            inputs_by_family[fam] = {
+                "candidates": pack.get("candidates", []),
+                "split": pack.get("split"),
+                "run_id": pack.get("run_id"),
+                "source_artifact_paths": pack.get("source_artifact_paths", []),
+                "discovered_at": pack.get("discovered_at"),
+            }
+            resolved.append(fam)
 
-    # Build dictionary (deterministic via active seed)
-    seed = active_seed(run_meta.get("seeds"), stage_idx=0)
-    result = build_ensemble_dictionary(
-        inputs_by_family=inputs_by_family,
-        config=cfg.dictionary,
-        run_dir=run_dir,
-        seed=seed,
-        families_to_evaluate=resolved,
-    )
+        # Build dictionary (deterministic via active seed)
+        seed = active_seed(run_meta.get("seeds"), stage_idx=0)
+        result = build_ensemble_dictionary(
+            inputs_by_family=inputs_by_family,
+            config=cfg.dictionary,
+            run_dir=run_dir,
+            seed=seed,
+            families_to_evaluate=resolved,
+        )
 
-    # Log artifacts
-    log_artifact(result.ensembles_path, kind="ensembles", metadata={"total": result.selected_total})
-    log_artifact(result.dictionary_path, kind="dictionary", metadata={"families": resolved})
-    log_artifact(result.go_no_go_path, kind="decision", metadata={"final": result.decision.get("final")})
+        # Log artifacts
+        log_artifact(result.ensembles_path, kind="ensembles", metadata={"total": result.selected_total})
+        log_artifact(result.dictionary_path, kind="dictionary", metadata={"families": resolved})
+        log_artifact(result.go_no_go_path, kind="decision", metadata={"final": result.decision.get("final")})
 
-    # Optional dashboard export
-    if args.export_flat:
-        flat_path = Path(args.export_flat)
-        export_dictionary(result.dictionary_path, result.ensembles_path, flat_path, provenance={"run_id": cfg_dict["run"]["run_id"]})
-        log_artifact(flat_path, kind="dashboard", metadata={"note": "flat_dictionary"})
+        # Optional dashboard export
+        if args.export_flat:
+            flat_path = Path(args.export_flat)
+            export_dictionary(
+                result.dictionary_path,
+                result.ensembles_path,
+                flat_path,
+                provenance={"run_id": cfg_dict["run"]["run_id"]},
+            )
+            log_artifact(flat_path, kind="dashboard", metadata={"note": "flat_dictionary"})
 
-    # Finalize metrics
-    finalize_run(
-        status="success",
-        metrics_dict={
-            "families_resolved": resolved,
-            "counts_by_family": result.counts_by_family,
-            "selected_total": result.selected_total,
-            "synergy_min": float(cfg.dictionary.synergy_min),
-            "stability_min": float(cfg.dictionary.stability_min),
-            "exemplars_top_k": int(cfg.dictionary.exemplars_top_k),
-            "min_passed_per_top_family": int(cfg.dictionary.min_passed_per_top_family),
-            "synergy_min_max_median": result.synergy_stats,
-            "stability_min_max_median": result.stability_stats,
-            "pre_threshold_counts": result.pre_threshold_counts,
-            "dedup_skipped_counts": result.dedup_skipped_counts,
-            "go_no_go": result.decision.get("final"),
-            "go_no_go_flags": result.decision.get("flags"),
-            "go_no_go_reasons": result.decision.get("reasons"),
-        },
-    )
+        # Finalize metrics
+        finalize_run(
+            status="success",
+            metrics_dict={
+                "families_resolved": resolved,
+                "counts_by_family": result.counts_by_family,
+                "selected_total": result.selected_total,
+                "synergy_min": float(cfg.dictionary.synergy_min),
+                "stability_min": float(cfg.dictionary.stability_min),
+                "exemplars_top_k": int(cfg.dictionary.exemplars_top_k),
+                "min_passed_per_top_family": int(cfg.dictionary.min_passed_per_top_family),
+                "synergy_min_max_median": result.synergy_stats,
+                "stability_min_max_median": result.stability_stats,
+                "pre_threshold_counts": result.pre_threshold_counts,
+                "dedup_skipped_counts": result.dedup_skipped_counts,
+                "go_no_go": result.decision.get("final"),
+                "go_no_go_flags": result.decision.get("flags"),
+                "go_no_go_reasons": result.decision.get("reasons"),
+            },
+        )
+    except Exception as exc:
+        fail = classify_exception(exc)
+        finalize_run(status="failed", metrics_dict={"failure_mode": fail.mode, "error": fail.message})
+        raise
 
 
 if __name__ == "__main__":

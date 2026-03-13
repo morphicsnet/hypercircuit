@@ -1,4 +1,7 @@
 logging:
+  mode: "mock"
+  member_granularity: "node_type"
+  source_kind: "mock"
   # Week 1 baseline instrumentation
   instrumented_layers: [-12,-11,-10,-9,-8,-7,-6,-5,-4,-3,-2,-1]
   token_window: 160

@@ -7,6 +7,7 @@ from typing import Dict, List, Mapping, Tuple
 import numpy as np
 
 from hypercircuit.sae_io.loaders import FakeSAEDictionary
+from hypercircuit.logging.schema import EventContext, build_event
 from hypercircuit.utils.io import save_jsonl
 from hypercircuit.utils.seed import seed_context
 from hypercircuit.utils.config import LoggingThresholds
@@ -35,7 +36,7 @@ class ActivationLogger:
     # Week 1 instrumentation controls
     instrumented_layers: List[int] = field(default_factory=lambda: list(range(-12, 0)))
     token_window: int = 160
-    thresholds: LoggingThresholds = LoggingThresholds()
+    thresholds: LoggingThresholds = field(default_factory=LoggingThresholds)
     node_types: Mapping[str, bool] = field(
         default_factory=lambda: {
             "sae_features": True,
@@ -51,6 +52,7 @@ class ActivationLogger:
     layers_profile_24: List[int] = field(default_factory=list)
     dataset_family: str | None = None
     dataset_top_behaviors: bool = False
+    event_ctx: EventContext | None = None
 
     def _node_spaces(self) -> Dict[str, int]:
         """Mock sizes for each node type."""
@@ -72,6 +74,13 @@ class ActivationLogger:
 
     def _generate(self, n_samples: int) -> Tuple[List[Mapping[str, object]], Mapping[str, object]]:
         events: List[Mapping[str, object]] = []
+        ctx = self.event_ctx or EventContext(
+            run_id="mock",
+            source_kind="mock",
+            feature_space_id="mock",
+            feature_space_version="v0",
+            dictionary_type="mock",
+        )
         enabled = self._enabled_types()
     
         # Resolve effective layers with optional Week 7 expansion
@@ -107,14 +116,17 @@ class ActivationLogger:
                                 space = node_spaces.get(nt, self.n_features)
                                 node_id = int(rng.integers(0, max(1, space)))
                                 events.append(
-                                    {
-                                        "sample_id": s,
-                                        "token_index": tok,
-                                        "layer": L,
-                                        "node_type": nt,
-                                        "node_id": node_id,
-                                        "tokens": self.tokens_per_sample,
-                                    }
+                                    build_event(
+                                        ctx=ctx,
+                                        sample_id=s,
+                                        sequence_id=s,
+                                        token_index=tok,
+                                        layer=L,
+                                        node_type=nt,
+                                        node_id=node_id,
+                                        value=1.0,
+                                        extra={"tokens": self.tokens_per_sample},
+                                    )
                                 )
                                 counts_by_type[nt] = counts_by_type.get(nt, 0) + 1
                                 any_layer_event = True
@@ -127,14 +139,17 @@ class ActivationLogger:
                     if counts_by_type.get(nt, 0) == 0:
                         L = layers[0]
                         events.append(
-                            {
-                                "sample_id": 0,
-                                "token_index": 0,
-                                "layer": L,
-                                "node_type": nt,
-                                "node_id": 0,
-                                "tokens": self.tokens_per_sample,
-                            }
+                            build_event(
+                                ctx=ctx,
+                                sample_id=0,
+                                sequence_id=0,
+                                token_index=0,
+                                layer=L,
+                                node_type=nt,
+                                node_id=0,
+                                value=1.0,
+                                extra={"tokens": self.tokens_per_sample},
+                            )
                         )
                         counts_by_type[nt] = 1
                         coverage_by_layer[L] += 1

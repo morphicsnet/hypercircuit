@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from hypercircuit.utils.config import Config, load_config, stage_path
+from hypercircuit.utils.config import Config, load_config, stage_path, apply_legacy_run_dir
 from hypercircuit.utils.registry import start_run, log_artifact, finalize_run
 from hypercircuit.utils.io import read_json, load_jsonl
 from hypercircuit.semantics.labeling import finalize_labels
@@ -47,11 +47,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         run_sec["output_dir"] = str(p.parent)
         run_sec["run_id"] = p.name
     else:
-        legacy = run_sec.get("run_dir")
-        if legacy:
-            lp = Path(legacy)
-            run_sec["output_dir"] = str(lp.parent)
-            run_sec["run_id"] = lp.name
+        apply_legacy_run_dir(run_sec)
 
     # Prefer dataset metadata (informational)
     ds = cfg.dataset

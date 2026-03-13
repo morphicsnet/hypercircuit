@@ -46,8 +46,8 @@ def assemble_gate1_report(
     """
     # Counts
     n_total = len(all_candidates)
-    n_size2 = sum(1 for c in all_candidates if int(c.get("size", 0)) == 2)
-    n_size3 = sum(1 for c in all_candidates if int(c.get("size", 0)) == 3)
+    n_size2 = sum(1 for c in all_candidates if int(c.get("arity", c.get("size", 0))) == 2)
+    n_size3 = sum(1 for c in all_candidates if int(c.get("arity", c.get("size", 0))) == 3)
     n_synergy = len(after_synergy)
     n_stability = len(after_stability)
 
@@ -73,11 +73,14 @@ def assemble_gate1_report(
     exemplars = [
         {
             "members": list(c.get("members", [])),
-            "size": int(c.get("size", 0)),
-            "support": int(c.get("support", 0)),
+            "arity": int(c.get("arity", c.get("size", 0))),
+            "size": int(c.get("size", c.get("arity", 0))),
+            "support_count": int(c.get("support_count", c.get("support", 0))),
+            "support": int(c.get("support", c.get("support_count", 0))),
             "weighted_support": float(c.get("weighted_support", 0.0)),
             "synergy_score": float(c.get("synergy_score", 0.0)),
             "stability_score": float(c.get("stability_score", 0.0)),
+            "scores": dict(c.get("scores") or {}),
         }
         for c in top
     ]
@@ -140,8 +143,8 @@ def assemble_week2_synergy_report(
 
         # Counts
         n_total = len(all_c)
-        n_size2 = sum(1 for c in all_c if int(c.get("size", 0)) == 2)
-        n_size3 = sum(1 for c in all_c if int(c.get("size", 0)) == 3)
+        n_size2 = sum(1 for c in all_c if int(c.get("arity", c.get("size", 0))) == 2)
+        n_size3 = sum(1 for c in all_c if int(c.get("arity", c.get("size", 0))) == 3)
         n_syn = len(after_syn)
         n_stab = len(after_stab)
 
@@ -159,11 +162,14 @@ def assemble_week2_synergy_report(
         exemplars = [
             {
                 "members": list(c.get("members", [])),
-                "size": int(c.get("size", 0)),
-                "support": int(c.get("support", 0)),
+                "arity": int(c.get("arity", c.get("size", 0))),
+                "size": int(c.get("size", c.get("arity", 0))),
+                "support_count": int(c.get("support_count", c.get("support", 0))),
+                "support": int(c.get("support", c.get("support_count", 0))),
                 "weighted_support": float(c.get("weighted_support", 0.0)),
                 "synergy_score": float(c.get("synergy_score", 0.0)),
                 "stability_score": float(c.get("stability_score", 0.0)),
+                "scores": dict(c.get("scores") or {}),
             }
             for c in top
         ]
@@ -232,6 +238,8 @@ def load_candidates_for_family(run_base: Path, family: str, split: Optional[str]
         or None if not found.
     """
     from hypercircuit.utils.io import read_json, load_jsonl  # lazy import to avoid cycles
+    from hypercircuit.utils.compat import assert_schema_version, assert_candidate_manifest
+    from hypercircuit.logging.schema import EVENT_SCHEMA_VERSION
 
     if not run_base.exists():
         return None
@@ -270,6 +278,16 @@ def load_candidates_for_family(run_base: Path, family: str, split: Optional[str]
         return None
 
     cands = load_jsonl(best_cand)
+    # Optional manifest-level compatibility checks
+    cand_manifest = best_run_dir / "candidates_manifest.json"
+    if cand_manifest.exists():
+        man = read_json(cand_manifest)
+        assert_schema_version(man, key="schema_version", supported=[EVENT_SCHEMA_VERSION])
+        assert_candidate_manifest(
+            man,
+            required_scores=["coactivation_score", "synergy_score", "stability_score"],
+            allowed_types=["coactivation"],
+        )
     src_paths = [str(best_cand)]
     if best_report is not None:
         src_paths.append(str(best_report))

@@ -4,20 +4,25 @@ from collections import defaultdict
 from itertools import combinations
 from typing import Dict, Iterable, List, Mapping, Tuple, Set
 
+from hypercircuit.utils.ids import member_key_from_event, candidate_key
+
 
 Member = str
 Key = Tuple[int, int, int]  # (sample_id, layer, window_index)
 
 
-def _member_from_event(ev: Mapping[str, object]) -> Member:
-    """Normalize an event into a member string (coarse in mock: by node_type only)."""
-    if "node_type" in ev:
-        return f"{ev['node_type']}"
-    # Back-compat: events with 'active' feature indices will be handled elsewhere
-    raise KeyError("Event missing node_type")
+def _member_from_event(ev: Mapping[str, object], granularity: str = "node_type") -> Member:
+    """Normalize an event into a member string using canonical member keys."""
+    try:
+        return member_key_from_event(ev, granularity=granularity)
+    except Exception as exc:
+        # Back-compat: events with 'active' feature indices will be handled elsewhere
+        raise KeyError("Event missing node_type") from exc
 
 
-def _build_transactions_from_logging(events: Iterable[Mapping[str, object]], temporal_span: int) -> Dict[Key, Set[Member]]:
+def _build_transactions_from_logging(
+    events: Iterable[Mapping[str, object]], temporal_span: int, member_granularity: str
+) -> Dict[Key, Set[Member]]:
     """Group logging events into transactions keyed by (sample, layer, window_index)."""
     tx: Dict[Key, Set[Member]] = defaultdict(set)
     for ev in events:
@@ -26,7 +31,7 @@ def _build_transactions_from_logging(events: Iterable[Mapping[str, object]], tem
         tok = int(ev.get("token_index", 0))  # type: ignore[arg-type]
         w = tok // max(1, temporal_span)
         try:
-            m = _member_from_event(ev)
+            m = _member_from_event(ev, granularity=member_granularity)
         except KeyError:
             # If this is an 'active' style record, skip here (handled by alt path)
             continue
@@ -46,13 +51,13 @@ def _build_transactions_from_active(events: Iterable[Mapping[str, object]], temp
     return tx
 
 
-def _ensure_transactions(events: Iterable[Mapping[str, object]], temporal_span: int) -> Dict[Key, Set[Member]]:
+def _ensure_transactions(events: Iterable[Mapping[str, object]], temporal_span: int, member_granularity: str) -> Dict[Key, Set[Member]]:
     # Peek first item to decide format
     events = list(events)
     for ev in events:
         if "active" in ev and "node_id" not in ev:
             return _build_transactions_from_active(events, temporal_span)
-    return _build_transactions_from_logging(events, temporal_span)
+    return _build_transactions_from_logging(events, temporal_span, member_granularity)
 
 
 def _mine_supports(
@@ -106,6 +111,7 @@ def mine_rank_weighted_coactivations(
     temporal_span: int,
     dedup_jaccard_min: float = 0.5,
     max_set_size: int = 3,
+    member_granularity: str = "node_type",
 ) -> Tuple[List[Dict[str, object]], Dict[frozenset[Member], float], Dict[str, Dict[frozenset[Member], float]]]:
     """Rank-weighted (uniform weights in mock) frequent-set mining for size 2–3.
 
@@ -113,7 +119,7 @@ def mine_rank_weighted_coactivations(
         (candidates, support_index, replicate_support_indices)
     """
     # Build transactions
-    tx = _ensure_transactions(list(events), temporal_span)
+    tx = _ensure_transactions(list(events), temporal_span, member_granularity)
     n_tx = len(tx)
 
     # Global supports
@@ -160,13 +166,23 @@ def mine_rank_weighted_coactivations(
             members_set = set(key)
             if any(_jaccard(members_set, prev) >= dedup_jaccard_min for prev in seen_sets):
                 continue
+            members_sorted = sorted(members_set)
+            support_count = int(raw_support.get(key, 0))
             accepted.append(
                 {
-                    "members": sorted(members_set),
-                    "size": s,
-                    "support": int(round(ws.get(key, 0.0) * n_tx)),
+                    "candidate_type": "coactivation",
+                    "candidate_id": candidate_key(members_sorted, candidate_type="coactivation"),
+                    "members": members_sorted,
+                    "arity": s,
+                    "support_count": int(support_count),
+                    "support": int(round(ws.get(key, 0.0) * n_tx)),  # back-compat
+                    "size": s,  # back-compat
                     "weighted_support": float(w_support),
                     "window_span": int(span),
+                    "formation_rule": "rank_weighted_coactivation",
+                    "scores": {
+                        "coactivation_score": float(w_support),
+                    },
                 }
             )
             seen_sets.append(members_set)
@@ -175,7 +191,7 @@ def mine_rank_weighted_coactivations(
                 break
 
     # Final stable sort for determinism
-    accepted.sort(key=lambda d: (-float(d["weighted_support"]), d["size"], tuple(d["members"])))  # type: ignore[index]
+    accepted.sort(key=lambda d: (-float(d["weighted_support"]), d["arity"], tuple(d["members"])))  # type: ignore[index]
 
     replicate_ws = {"A": ws_a, "B": ws_b}
     return accepted, ws, replicate_ws
@@ -197,6 +213,7 @@ def mine_coactivations(
         temporal_span=3,
         dedup_jaccard_min=0.5,
         max_set_size=max_set_size,
+        member_granularity="node_type",
     )
     # Truncate to overall cap for compatibility
     return cands[:candidate_cap]

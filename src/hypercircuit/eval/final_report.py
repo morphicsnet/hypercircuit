@@ -51,6 +51,35 @@ def _gate4_flags(g4: Mapping[str, Any]) -> Tuple[bool, List[str]]:
     return bool(ok), ([] if ok else ["gate4_accept_false"])
 
 
+def _apply_acceptance_requirements(
+    *,
+    flags: Mapping[str, bool],
+    requirements: Optional[Mapping[str, Optional[bool]]],
+) -> Tuple[bool, List[str]]:
+    if not requirements:
+        return bool(flags["accept_gate1"] and flags["accept_gate2"] and flags["accept_gate3"] and flags["accept_gate4"]), []
+
+    reasons: List[str] = []
+    def _req_ok(key: str, actual: bool) -> bool:
+        req_val = requirements.get(key)
+        if req_val is None:
+            return True
+        ok = bool(req_val) == bool(actual)
+        if not ok:
+            reasons.append(f"release_requirement_mismatch_{key}")
+        return ok
+
+    ok_all = True
+    ok_all &= _req_ok("gate1_go", bool(flags.get("accept_gate1", False)))
+    ok_all &= _req_ok("gate2_accept_all", bool(flags.get("accept_gate2", False)))
+    ok_all &= _req_ok("gate3_accept_all", bool(flags.get("accept_gate3", False)))
+    ok_all &= _req_ok("gate4_accept", bool(flags.get("accept_gate4", False)))
+
+    # Always require the gate flags themselves to pass for release
+    gate_ok = bool(flags["accept_gate1"] and flags["accept_gate2"] and flags["accept_gate3"] and flags["accept_gate4"])
+    return bool(ok_all and gate_ok), reasons
+
+
 def _mk_summary_md(
     *,
     snapshot_id: Optional[str],
@@ -157,8 +186,17 @@ def assemble_final_report(
     except Exception:
         sections_emitted = 0
 
-    # Final decision: all gates True
-    accept_release = bool(flags["accept_gate1"] and flags["accept_gate2"] and flags["accept_gate3"] and flags["accept_gate4"])
+    # Final decision: all gates True + optional acceptance requirements
+    reqs = None
+    try:
+        rel = getattr(cfg, "release", None)
+        reqs = rel.acceptance_requirements.model_dump() if rel and getattr(rel, "acceptance_requirements", None) else None
+    except Exception:
+        reqs = None
+    accept_release, req_reasons = _apply_acceptance_requirements(flags=flags, requirements=reqs)
+    for r in req_reasons:
+        if r not in reasons:
+            reasons.append(r)
 
     # Compose JSON report
     report = {
@@ -168,6 +206,7 @@ def assemble_final_report(
         "gates": flags,
         "accept_release": bool(accept_release),
         "reasons": reasons,
+        "acceptance_requirements": reqs,
         "labels": {
             "agreement_kappa_mock": kappa,
         },

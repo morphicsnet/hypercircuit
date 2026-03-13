@@ -4,11 +4,12 @@ import argparse
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
-from hypercircuit.utils.config import Config, load_config, stage_path
+from hypercircuit.utils.config import Config, load_config, stage_path, apply_legacy_run_dir
 from hypercircuit.utils.registry import start_run, log_artifact, finalize_run
 from hypercircuit.utils.io import read_json
 from hypercircuit.dictionary.freeze import freeze_dictionary, assemble_release_manifest
 from hypercircuit.eval.final_report import assemble_final_report
+from hypercircuit.utils.failures import classify_exception
 
 
 def _parse(argv: Optional[List[str]] = None) -> argparse.Namespace:
@@ -33,11 +34,7 @@ def _prepare_run(cfg: Config, args: argparse.Namespace) -> tuple[Dict[str, Any],
         run_sec["output_dir"] = str(p.parent)
         run_sec["run_id"] = p.name
     else:
-        legacy = run_sec.get("run_dir")
-        if legacy and not run_sec.get("run_id"):
-            lp = Path(legacy)
-            run_sec["output_dir"] = str(lp.parent)
-            run_sec["run_id"] = lp.name
+        apply_legacy_run_dir(run_sec)
 
     # Wire dataset metadata (task_family, split)
     ds = cfg.dataset
@@ -121,87 +118,92 @@ def main(argv: Optional[List[str]] = None) -> None:
     cfg: Config = load_config(args.config, args.override)
     cfg_dict, run_dir = _prepare_run(cfg, args)
 
-    # 1) Freeze dictionary
-    fr = freeze_dictionary(cfg=cfg, run_dir=run_dir, families=args.families)
-    frozen_path = Path(fr["frozen_path"])
-    snapshot_id = str(fr.get("snapshot_id"))
-    n_frozen = int(fr.get("n_ensembles", 0))
-    log_artifact(frozen_path, kind="dictionary_frozen", metadata={"snapshot_id": snapshot_id, "n_ensembles": n_frozen})
-
-    # 2) Final report + summary (aggregates Gates 1-4 + labels + dashboard summary)
-    fin = assemble_final_report(cfg=cfg, run_dir=run_dir, snapshot_id=snapshot_id, n_ensembles_frozen=n_frozen)
-    final_report_path = Path(fin["report_path"])
-    final_summary_path = Path(fin["summary_path"])
-    flags: Mapping[str, bool] = fin["flags"]
-    reasons = list(fin.get("reasons", []))
-
-    log_artifact(final_report_path, kind="final_report")
-    log_artifact(final_summary_path, kind="final_summary")
-
-    # 3) Scaling recommendation doc (templated)
-    scaling_name = getattr(getattr(cfg, "release", None), "out_dir_names", None)
-    scaling_fname = getattr(scaling_name, "scaling_doc", "SCALING_RECOMMENDATION.md") if scaling_name else "SCALING_RECOMMENDATION.md"
-
-    # quick budgets: size of key artifacts
-    storage_bytes = 0
-    for p in [frozen_path, final_report_path, final_summary_path]:
-        if p.exists():
-            try:
-                storage_bytes += p.stat().st_size
-            except Exception:
-                pass
-    scaling_metrics = {
-        "snapshot_id": snapshot_id,
-        "n_ensembles_frozen": n_frozen,
-        "flags": flags,
-        "accept_release": bool(flags.get("accept_release", False)),
-        "release_bundle_checksum": "",  # populated post-manifest
-        "budgets": {"storage_bytes": storage_bytes, "compute_stub": "deterministic-mock"},
-        "reasons": reasons,
-    }
-    scaling_path = _write_scaling_doc(run_dir=run_dir, fname=scaling_fname, metrics=scaling_metrics)
-    log_artifact(scaling_path, kind="scaling_recommendation")
-
-    # 4) Assemble release manifest (with bundle checksum)
-    artifacts: Dict[str, Path] = {
-        "ensemble_dictionary_frozen": frozen_path,
-        "final_report": final_report_path,
-        "final_summary": final_summary_path,
-        "scaling_recommendation": scaling_path,
-    }
-    acceptance_flags = {
-        "accept_gate1": bool(flags.get("accept_gate1", False)),
-        "accept_gate2": bool(flags.get("accept_gate2", False)),
-        "accept_gate3": bool(flags.get("accept_gate3", False)),
-        "accept_gate4": bool(flags.get("accept_gate4", False)),
-    }
-    man = assemble_release_manifest(cfg=cfg, run_dir=run_dir, snapshot_id=snapshot_id, artifacts=artifacts, acceptance_flags=acceptance_flags, reasons=reasons)
-    manifest_path = Path(man["manifest_path"])
-    bundle_checksum = str(man.get("release_bundle_checksum", ""))
-    log_artifact(manifest_path, kind="release_manifest", metadata={"bundle_checksum": bundle_checksum})
-
-    # Update scaling doc checksum info (best-effort)
     try:
-        scaling_metrics["release_bundle_checksum"] = bundle_checksum
-        _ = _write_scaling_doc(run_dir=run_dir, fname=scaling_fname, metrics=scaling_metrics)
-    except Exception:
-        pass
+        # 1) Freeze dictionary
+        fr = freeze_dictionary(cfg=cfg, run_dir=run_dir, families=args.families)
+        frozen_path = Path(fr["frozen_path"])
+        snapshot_id = str(fr.get("snapshot_id"))
+        n_frozen = int(fr.get("n_ensembles", 0))
+        log_artifact(frozen_path, kind="dictionary_frozen", metadata={"snapshot_id": snapshot_id, "n_ensembles": n_frozen})
 
-    # 5) Finalize registry with release metrics
-    finalize_run(
-        status="success",
-        metrics_dict={
+        # 2) Final report + summary (aggregates Gates 1-4 + labels + dashboard summary)
+        fin = assemble_final_report(cfg=cfg, run_dir=run_dir, snapshot_id=snapshot_id, n_ensembles_frozen=n_frozen)
+        final_report_path = Path(fin["report_path"])
+        final_summary_path = Path(fin["summary_path"])
+        flags: Mapping[str, bool] = fin["flags"]
+        reasons = list(fin.get("reasons", []))
+
+        log_artifact(final_report_path, kind="final_report")
+        log_artifact(final_summary_path, kind="final_summary")
+
+        # 3) Scaling recommendation doc (templated)
+        scaling_name = getattr(getattr(cfg, "release", None), "out_dir_names", None)
+        scaling_fname = getattr(scaling_name, "scaling_doc", "SCALING_RECOMMENDATION.md") if scaling_name else "SCALING_RECOMMENDATION.md"
+
+        # quick budgets: size of key artifacts
+        storage_bytes = 0
+        for p in [frozen_path, final_report_path, final_summary_path]:
+            if p.exists():
+                try:
+                    storage_bytes += p.stat().st_size
+                except Exception:
+                    pass
+        scaling_metrics = {
             "snapshot_id": snapshot_id,
             "n_ensembles_frozen": n_frozen,
-            "accept_gate1": bool(acceptance_flags["accept_gate1"]),
-            "accept_gate2": bool(acceptance_flags["accept_gate2"]),
-            "accept_gate3": bool(acceptance_flags["accept_gate3"]),
-            "accept_gate4": bool(acceptance_flags["accept_gate4"]),
+            "flags": flags,
             "accept_release": bool(flags.get("accept_release", False)),
-            "release_bundle_checksum": bundle_checksum,
+            "release_bundle_checksum": "",  # populated post-manifest
+            "budgets": {"storage_bytes": storage_bytes, "compute_stub": "deterministic-mock"},
             "reasons": reasons,
-        },
-    )
+        }
+        scaling_path = _write_scaling_doc(run_dir=run_dir, fname=scaling_fname, metrics=scaling_metrics)
+        log_artifact(scaling_path, kind="scaling_recommendation")
+
+        # 4) Assemble release manifest (with bundle checksum)
+        artifacts: Dict[str, Path] = {
+            "ensemble_dictionary_frozen": frozen_path,
+            "final_report": final_report_path,
+            "final_summary": final_summary_path,
+            "scaling_recommendation": scaling_path,
+        }
+        acceptance_flags = {
+            "accept_gate1": bool(flags.get("accept_gate1", False)),
+            "accept_gate2": bool(flags.get("accept_gate2", False)),
+            "accept_gate3": bool(flags.get("accept_gate3", False)),
+            "accept_gate4": bool(flags.get("accept_gate4", False)),
+        }
+        man = assemble_release_manifest(cfg=cfg, run_dir=run_dir, snapshot_id=snapshot_id, artifacts=artifacts, acceptance_flags=acceptance_flags, reasons=reasons)
+        manifest_path = Path(man["manifest_path"])
+        bundle_checksum = str(man.get("release_bundle_checksum", ""))
+        log_artifact(manifest_path, kind="release_manifest", metadata={"bundle_checksum": bundle_checksum})
+
+        # Update scaling doc checksum info (best-effort)
+        try:
+            scaling_metrics["release_bundle_checksum"] = bundle_checksum
+            _ = _write_scaling_doc(run_dir=run_dir, fname=scaling_fname, metrics=scaling_metrics)
+        except Exception:
+            pass
+
+        # 5) Finalize registry with release metrics
+        finalize_run(
+            status="success",
+            metrics_dict={
+                "snapshot_id": snapshot_id,
+                "n_ensembles_frozen": n_frozen,
+                "accept_gate1": bool(acceptance_flags["accept_gate1"]),
+                "accept_gate2": bool(acceptance_flags["accept_gate2"]),
+                "accept_gate3": bool(acceptance_flags["accept_gate3"]),
+                "accept_gate4": bool(acceptance_flags["accept_gate4"]),
+                "accept_release": bool(flags.get("accept_release", False)),
+                "release_bundle_checksum": bundle_checksum,
+                "reasons": reasons,
+            },
+        )
+    except Exception as exc:
+        fail = classify_exception(exc)
+        finalize_run(status="failed", metrics_dict={"failure_mode": fail.mode, "error": fail.message})
+        raise
 
 
 if __name__ == "__main__":
