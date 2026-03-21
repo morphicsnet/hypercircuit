@@ -1,0 +1,32 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1120' height='320' viewBox='0 0 1120 320'>
+<defs>
+<linearGradient id='bg' x1='0%' y1='0%' x2='100%' y2='100%'>
+<stop offset='0%' stop-color='#f8fafc'/>
+<stop offset='100%' stop-color='#eef2ff'/>
+</linearGradient>
+<filter id='shadow' x='-10%' y='-10%' width='130%' height='130%'>
+<feDropShadow dx='0' dy='8' stdDeviation='12' flood-color='#0f172a' flood-opacity='0.10'/>
+</filter>
+</defs>
+<rect width='100%' height='100%' rx='24' fill='url(#bg)'/>
+<text x='70' y='56' font-family='Helvetica,Arial,sans-serif' font-size='28' font-weight='700' fill='#0f172a'>Hypercircuit</text>
+<text x='70' y='86' font-family='Helvetica,Arial,sans-serif' font-size='16' fill='#334155'>A stage-gated corridor from activation logging to release-grade mechanism reports.</text>
+<rect x='70' y='150' width='210' height='88' rx='18' fill='white' stroke='#7c3aed' stroke-width='2' filter='url(#shadow)'/>
+<text x='88' y='184' font-family='Helvetica,Arial,sans-serif' font-size='18' font-weight='700' fill='#0f172a'>Log</text>
+<text x='88' y='210' font-family='Helvetica,Arial,sans-serif' font-size='13' fill='#475569'>feature events</text>
+<line x1='290' y1='194.0' x2='312' y2='194.0' stroke='#7c3aed' stroke-width='4' stroke-linecap='round'/>
+<polygon points='312,194.0 300,186.0 300,202.0' fill='#7c3aed'/>
+<rect x='320' y='150' width='210' height='88' rx='18' fill='white' stroke='#7c3aed' stroke-width='2' filter='url(#shadow)'/>
+<text x='338' y='184' font-family='Helvetica,Arial,sans-serif' font-size='18' font-weight='700' fill='#0f172a'>Discover</text>
+<text x='338' y='210' font-family='Helvetica,Arial,sans-serif' font-size='13' fill='#475569'>gate 1 candidates</text>
+<line x1='540' y1='194.0' x2='562' y2='194.0' stroke='#7c3aed' stroke-width='4' stroke-linecap='round'/>
+<polygon points='562,194.0 550,186.0 550,202.0' fill='#7c3aed'/>
+<rect x='570' y='150' width='210' height='88' rx='18' fill='white' stroke='#7c3aed' stroke-width='2' filter='url(#shadow)'/>
+<text x='588' y='184' font-family='Helvetica,Arial,sans-serif' font-size='18' font-weight='700' fill='#0f172a'>Score</text>
+<text x='588' y='210' font-family='Helvetica,Arial,sans-serif' font-size='13' fill='#475569'>surrogates + causal</text>
+<line x1='790' y1='194.0' x2='812' y2='194.0' stroke='#7c3aed' stroke-width='4' stroke-linecap='round'/>
+<polygon points='812,194.0 800,186.0 800,202.0' fill='#7c3aed'/>
+<rect x='820' y='150' width='210' height='88' rx='18' fill='white' stroke='#7c3aed' stroke-width='2' filter='url(#shadow)'/>
+<text x='838' y='184' font-family='Helvetica,Arial,sans-serif' font-size='18' font-weight='700' fill='#0f172a'>Release</text>
+<text x='838' y='210' font-family='Helvetica,Arial,sans-serif' font-size='13' fill='#475569'>dashboards + gates</text>
+</svg>
