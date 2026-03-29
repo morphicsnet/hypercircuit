@@ -50,6 +50,7 @@ hypercircuit-run-week6-gate4 = "hypercircuit.cli.run_week6_gate4:main"
 hypercircuit-run-week7-labels-dash = "hypercircuit.cli.run_week7_labels_dash:main"
 hypercircuit-run-week8-release = "hypercircuit.cli.run_week8_release:main"
 hypercircuit-run-reconcile = "hypercircuit.cli.run_reconcile:main"
+hypercircuit-run-blt-analysis = "hypercircuit.cli.run_blt_analysis:main"
 
 [tool.setuptools]
 include-package-data = true
