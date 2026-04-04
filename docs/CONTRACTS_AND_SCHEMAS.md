@@ -1,6 +1,14 @@
 # Contracts and Schemas (Prose)
 
-This document consolidates the core data contracts and prose schemas underpinning the Hypercircuit pipeline. It focuses on stable shapes, field meanings, provenance, determinism, and retention. All contracts are mock-friendly and deterministic. No external model calls are assumed.
+This document consolidates the core data contracts and prose schemas underpinning the
+hypercircuit corridor. It focuses on stable shapes, field meanings, provenance,
+determinism, and retention for an adjacent platform whose job is to turn upstream traces
+and manifests into explicit higher-order mechanism artifacts.
+
+The north-star thesis is defined in [NORTH_STAR.md](NORTH_STAR.md). These contracts should
+be read as the artifact discipline that makes that thesis auditable. Some current producers
+are still mock-friendly or scaffolded, but the contracts themselves are written to support
+both structure-validation mode and the more fully real downstream path.
 
 Operational notes:
 - CLI entry points are exposed via console scripts (for example, `hypercircuit-run-log`, `hypercircuit-run-week5-safety`).
@@ -18,7 +26,8 @@ Sections:
 ## 1) Feature activation logs (temporal spike sequences)
 
 Purpose:
-- Capture instrumented feature events per sample with minimal yet sufficient provenance for downstream mining, stability checks, and synthetic evaluation.
+- Capture instrumented feature events per sample with minimal yet sufficient provenance for
+  downstream mining, stability checks, and later mechanism evaluation.
 
 Prose schema:
 - One record per event (canonical event stream).

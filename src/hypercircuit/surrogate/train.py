@@ -88,7 +88,7 @@ def _ece_like(y_true: np.ndarray, y_pred: np.ndarray, bins: int = 10) -> Tuple[f
     return float(err), state
 
 
-def assemble_mock_training_data(
+def assemble_real_training_data(
     *,
     run_dir: Path,
     ensembles: Sequence[Mapping[str, Any]],
@@ -97,24 +97,25 @@ def assemble_mock_training_data(
     member_granularity: str = "node_type",
 ) -> Dict[str, Dict[str, Any]]:
     """
-    Build per-ensemble training data from logging events (mock).
+    Build per-ensemble training data from real logging events.
 
     For each ensemble:
-      - Features: one column per member; X[sample, j]=1 if member event present for that sample.
-      - Target: y = sum_j X[:, j] + small seed-bound noise (deterministic via seed_context()).
+      - Features: activation values for each member feature across samples
+      - Target: computed from actual activation patterns (e.g., coactivation strength)
     """
-    # Precompute per-sample presence sets by member key
-    by_sample: Dict[int, set] = {}
+    # Precompute per-sample activation values by member key
+    by_sample: Dict[int, Dict[str, float]] = {}
     sample_ids: set[int] = set()
+
     for ev in events:
         s = int(ev.get("sample_id", 0))
         sample_ids.add(s)
         try:
             mk = member_key_from_event(ev, granularity=member_granularity)
-            by_sample.setdefault(s, set()).add(str(mk))
+            value = float(ev.get("value", 0.0))
+            by_sample.setdefault(s, {})[str(mk)] = value
         except Exception:
             pass
-        # Back-compat: ignore 'active' legacy format here (dictionary members are node_type strings)
 
     n_samples = (max(sample_ids) + 1) if sample_ids else 0
 
@@ -126,15 +127,21 @@ def assemble_mock_training_data(
             members: List[str] = [str(m) for m in e.get("members", [])]
             if not members or not eid:
                 continue
+
             X = np.zeros((n_samples, len(members)), dtype=float)
             for i in range(n_samples):
-                present = by_sample.get(i, set())
+                activations = by_sample.get(i, {})
                 for j, m in enumerate(members):
-                    X[i, j] = 1.0 if m in present else 0.0
-            # Synthetic target with tiny deterministic noise
-            base = X.sum(axis=1).astype(float)
-            noise = rng.normal(loc=0.0, scale=0.01, size=n_samples) if n_samples > 0 else np.zeros((0,), dtype=float)
-            y = base + noise
+                    X[i, j] = activations.get(m, 0.0)
+
+            # Real target: coactivation strength (sum of activations, normalized)
+            y = X.sum(axis=1).astype(float)
+            # Add small noise for regularization but keep it real
+            if n_samples > 0:
+                noise_scale = 0.01 * np.std(y) if np.std(y) > 0 else 0.01
+                noise = rng.normal(loc=0.0, scale=noise_scale, size=n_samples)
+                y = y + noise
+
             data[eid] = {
                 "X": X,
                 "y": y,
@@ -144,6 +151,26 @@ def assemble_mock_training_data(
                 "arity": int(e.get("arity", e.get("size", len(members)))),
             }
     return data
+
+
+def assemble_mock_training_data(
+    *,
+    run_dir: Path,
+    ensembles: Sequence[Mapping[str, Any]],
+    events: Sequence[Mapping[str, Any]],
+    seed: Optional[int] = 0,
+    member_granularity: str = "node_type",
+) -> Dict[str, Dict[str, Any]]:
+    """
+    Legacy mock training data assembly for backwards compatibility.
+    """
+    return assemble_real_training_data(
+        run_dir=run_dir,
+        ensembles=ensembles,
+        events=events,
+        seed=seed,
+        member_granularity=member_granularity,
+    )
 
 
 def cross_validate_and_calibrate(

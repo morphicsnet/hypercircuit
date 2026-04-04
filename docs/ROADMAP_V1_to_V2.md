@@ -1,6 +1,14 @@
 # V1 → V2 Integrated Roadmap
 
-This document describes the approved plan to evolve Hypercircuit from the V1 scaffold to a V2-ready, deterministic and testable pipeline with ensemble discovery, surrogate modeling, causal evaluation, safety edit protocols, and gating. It consolidates architecture, data plan, interfaces, migration strategy, and a phased execution roadmap with acceptance criteria.
+This document describes the approved plan to evolve hypercircuit from a
+structure-validating corridor into a more fully real adjacent platform for higher-order
+mechanism geometry and intervention evidence. It consolidates architecture, data plan,
+interfaces, migration strategy, and a phased execution roadmap with acceptance criteria.
+
+The north-star thesis is defined in [NORTH_STAR.md](NORTH_STAR.md): hypercircuit should
+take upstream traces and manifests and turn them into explicit candidate, surrogate,
+causal, edit, and release artifacts. This roadmap is the implementation path toward that
+thesis, not a claim that the full downstream corridor is already real today.
 
 ## Target architecture and principles
 
@@ -21,6 +29,8 @@ Architecture principles:
 - Separation of concerns: discovery, modeling, evaluation, steering are independent.
 - Progressive disclosure of risk: Gate 1 (discovery), Gate 2 (surrogate + causal), Gate 3 (safety edits).
 - Back‑compat: V1 CLIs and artifacts remain usable while V2 features are added.
+- Adjacent-system discipline: upstream capture/manifest ownership remains outside
+  hypercircuit; hypercircuit stays focused on downstream mechanism evidence.
 
 ## Data and storage plan
 

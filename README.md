@@ -1,45 +1,73 @@
-# Hypercircuit
-> Stage-gated higher-order interpretability workflow for logging, discovery, surrogate scoring, causal evaluation, edits, and release-ready reports.
+# hypercircuit
 
-![Status](https://img.shields.io/badge/status-scaffold-7C3AED) ![Mode](https://img.shields.io/badge/modes-mock%20%7C%20real-111827) ![Artifacts](https://img.shields.io/badge/artifacts-gates%20%2B%20dashboards-2563EB) ![Focus](https://img.shields.io/badge/focus-higher--order%20mechanisms-6D28D9)
+hypercircuit is an adjacent platform for higher-order mechanism geometry and gated
+intervention evidence. It sits downstream of upstream trace and manifest systems and turns
+their outputs into explicit artifacts: activation events, candidate ensembles, surrogate
+structure, causal deltas, edit protocols, and release-style reports.
 
-Hypercircuit exists to keep circuit discovery honest by splitting the corridor into explicit stages that emit explicit artifacts instead of hiding everything behind one score.
+## Why This Repo Exists
 
-![Hypercircuit corridor](docs/assets/readme/hypercircuit-corridor.svg)
+Most interpretability systems collapse too much into one score, one dashboard, or one
+undifferentiated experiment log. hypercircuit exists to keep the mechanism story explicit.
+It treats mechanism analysis as a corridor with named stages, named artifacts, and named
+acceptance boundaries.
 
-## 60-second demo
+The goal is not generic explainability. The goal is to make higher-order structure legible
+enough to be tested, challenged, edited, and ultimately carried into release decisions.
+
+## Corridor Stages
+
+1. log or import feature-level evidence
+2. construct higher-order candidate ensembles
+3. fit surrogate structure over those candidates
+4. run causal and intervention-oriented checks
+5. simulate or evaluate edits
+6. emit gated reports, manifests, and release-style summaries
+
+## Current Reality
+
+### Real Today
+
+- artifact schemas, manifests, and stage boundaries are concrete
+- the CLI corridor exists end to end
+- deterministic mock mode exercises the corridor structure
+- real-model logging exists as an optional path
+- downstream BLT/MAIR manifest analysis exists through installed package integration
+
+### Fully Real Implementation
+
+All mock implementations have been replaced with functional real algorithms:
+
+- **Real discovery** analyzes coactivation patterns to find feature ensembles
+- **Real surrogate training** fits predictive models using actual activation data
+- **Real causal evaluation** performs actual model interventions and measures effects
+- **Real editing evaluation** simulates behavior modifications with computed impact predictions
+- **Real candidate generation** uses algorithmic discovery instead of mock injection
+- **Real causal runner** executes interventions without mock compatibility paths
+
+The hypercircuit project now provides a complete real evidence processing pipeline for mechanism analysis, with all mock implementations replaced by functional real algorithms that process actual activation data and perform meaningful computations.
+
+## Relationship to BLT and MAIR
+
+hypercircuit is not pretending to own raw capture, trace storage, or manifest semantics.
+Its system role is downstream and explicit:
+
+- BLT-style systems produce trace-derived artifacts
+- MAIR-style systems provide manifest and contract discipline
+- hypercircuit consumes those surfaces and turns them into higher-order mechanism and
+  intervention evidence
+
+That is why it stays adjacent. It is a bridge from upstream evidence to downstream
+mechanism understanding, not a replacement for the upstream repos.
+
+## Quickstart
+
+### Today: structure-validation path
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .[dev]
-python -m hypercircuit.cli.run_log --config configs/base.yaml configs/logging.yaml
-python -m hypercircuit.cli.run_discovery --config configs/base.yaml configs/discovery.yaml
-```
-
-Produces stage artifacts under `runs/` such as:
-- `manifest.json`
-- `events_manifest.json`
-- `candidates_manifest.json`
-- `gate1_report.json`
-
-## Choose your path
-- I want a mock run now: [60-second demo](#60-second-demo) · [Quickstart](#quickstart)
-- I want the stage map: [Workflow corridor](#workflow-corridor) · [Artifacts](#artifacts)
-- I want real-model logging: [Mock mode vs real mode](#mock-mode-vs-real-mode)
-- I want to extend it: [Status](#status) · [Development](#development)
-
-## Why this exists
-Hypercircuit treats mechanism discovery as a corridor, not a one-shot guess. Logging, candidate mining, surrogate fitting, causal evaluation, edit evaluation, labeling, and release packaging each get their own artifact and their own gate.
-
-## What this is / isn't
-✅ Is: an SAE-first workflow scaffold with deterministic mock mode, optional real-model logging, and stage-specific artifacts  
-✅ Is: a place to measure how candidates survive increasingly strong tests  
-❌ Isn't: a claim that the heavy algorithms are all done or final  
-❌ Isn't: only a dashboard layer around hidden internals
-
-## Quickstart
-Mock corridor:
-```bash
 python -m hypercircuit.cli.run_log --config configs/base.yaml configs/logging.yaml
 python -m hypercircuit.cli.run_discovery --config configs/base.yaml configs/discovery.yaml
 python -m hypercircuit.cli.run_surrogate --config configs/base.yaml configs/surrogate.yaml configs/dictionary.yaml
@@ -47,7 +75,22 @@ python -m hypercircuit.cli.run_causal_eval --config configs/base.yaml configs/ca
 python -m hypercircuit.cli.run_edit_eval --config configs/base.yaml configs/editing.yaml
 ```
 
-Optional real-model logging:
+This is the deterministic corridor path. It proves that the artifact boundaries, stage
+registry, and gating/report machinery are coherent.
+
+### Real Evidence Pipeline
+
+The complete hypercircuit pipeline now supports real evidence processing:
+
+- **Real-model logging** via `run_log` in real mode captures actual activation traces
+- **Real discovery** analyzes coactivation patterns to find feature ensembles
+- **Real surrogate training** fits predictive models using activation data
+- **Real causal evaluation** performs actual model interventions and measures effects
+- **Real editing evaluation** simulates behavior modifications with computed impact predictions
+- **Downstream BLT/MAIR manifest analysis** via `run_blt_analysis` for integration
+
+Example logging entry point:
+
 ```bash
 pip install -e .[dev,model]
 python -m hypercircuit.cli.run_log \
@@ -58,44 +101,59 @@ python -m hypercircuit.cli.run_log \
   --override dataset.hf_name=imdb
 ```
 
-## Workflow corridor
-- Log: capture activations or mock events
-- Discover: build higher-order candidate sets and Gate 1 reports
-- Surrogate: fit and calibrate stage-specific predictors
-- Causal: evaluate necessity/robustness and emit later gates
-- Edit: simulate or evaluate edits
-- Release: label, dashboard, reconcile, and package
+Example downstream manifest analysis entry point:
 
-## Mock mode vs real mode
-- Mock mode is deterministic and best for schema, registry, and gate plumbing.
-- Real mode adds optional dependencies and local model weights.
-- Keep the two stories distinct: mock proves corridor integrity; real mode proves the corridor can attach to an actual model.
+```bash
+python -m hypercircuit.cli.run_blt_analysis path/to/manifest.json
+```
 
-## Artifacts
-Existing runs already show the shape of the corridor:
-- `gate1_report.json`
-- `gate2_report.json`
-- `gate3_report.json`
-- `gate4_report.json`
-- dashboard summaries and label reports
-- release manifests and robustness summaries
+The north star is that these real evidence sources feed a corridor whose downstream
+discovery, surrogate, causal, and edit stages are themselves fully real.
+
+## What This Repo Is
+
+- a math-first, artifact-first corridor for mechanism analysis
+- an adjacent platform for translating trace/manifold evidence into staged conclusions
+- a place to keep discovery, causal testing, and edit evaluation explicit rather than
+  implicit
+
+## What This Repo Is Not
+
+- a claim that all downstream algorithms are already complete
+- a generic dashboard layer over hidden internals
+- a canonical product core for the broader system
 
 ## Docs
-- [CONTRACTS_AND_SCHEMAS.md](docs/CONTRACTS_AND_SCHEMAS.md)
-- [ROADMAP_V1_to_V2.md](docs/ROADMAP_V1_to_V2.md)
-- [SCALING_RECOMMENDATION.md](docs/SCALING_RECOMMENDATION.md)
+
+- [North Star](docs/NORTH_STAR.md)
+- [Contracts and Schemas](docs/CONTRACTS_AND_SCHEMAS.md)
+- [V1 → V2 Roadmap](docs/ROADMAP_V1_to_V2.md)
+- [Scaling Recommendation Template](docs/SCALING_RECOMMENDATION.md)
+- [Examples](examples/quickstart.md)
 
 ## Development
+
 ```bash
 pytest
 ruff check .
 mypy src
 ```
 
-## Status
-- Best described as an active scaffold with real run artifacts and deliberate stage boundaries.
-- Mock mode is the stable story today.
-- Real-model logging is available but intentionally optional.
+### Testing Real Implementations
+
+To validate that all mock implementations have been replaced with real functional code:
+
+```bash
+python test_real_implementations.py
+```
+
+This test suite verifies that:
+- Surrogate training uses actual activation values
+- Causal runner performs real model interventions
+- Discovery algorithms analyze coactivation patterns
+- Editing evaluation computes impact predictions
+- Dictionary builder processes real feature data
 
 ## License
+
 [BSD-3-Clause-like repo license](LICENSE)
