@@ -1,0 +1,19 @@
+{
+  "_schema_version": "0.1.0",
+  "schema_version": "0.1.0",
+  "created_at": "2026-04-04T19:36:42.180966+00:00",
+  "flags": {
+    "counts_ok": true,
+    "storage_ok": true
+  },
+  "families_checked": [
+    "sycophancy",
+    "jailbreak"
+  ],
+  "counts_by_family": {
+    "sycophancy": 1,
+    "jailbreak": 1
+  },
+  "final": "go",
+  "reasons": []
+}

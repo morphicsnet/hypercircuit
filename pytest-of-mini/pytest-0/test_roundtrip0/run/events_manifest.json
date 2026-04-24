@@ -1,0 +1,32 @@
+{
+  "_schema_version": "0.1.0",
+  "schema_version": "0.2.0",
+  "run_id": "run",
+  "run_intent": "dev",
+  "source_kind": "mock",
+  "member_granularity": "node_type",
+  "feature_space": {
+    "feature_space_id": "mock",
+    "feature_space_version": "v0",
+    "feature_space_type": "mock"
+  },
+  "model": null,
+  "tokenizer": null,
+  "dataset": {
+    "source": "mock",
+    "name": "synthetic_parity",
+    "hf_name": null,
+    "hf_split": "train",
+    "path": null,
+    "text_field": "text",
+    "label_field": null,
+    "max_samples": null
+  },
+  "tags": {
+    "task_family": "synthetic_parity",
+    "prompt_family": null,
+    "split": "dev",
+    "capability_tag": null,
+    "safety_tag": null
+  }
+}

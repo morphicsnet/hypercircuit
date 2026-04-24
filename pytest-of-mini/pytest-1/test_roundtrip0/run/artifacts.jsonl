@@ -1,0 +1,11 @@
+{"path": "events_manifest.json", "kind": "events_manifest", "created_at": "2026-04-04T19:36:20.849799+00:00", "meta": {}}
+{"path": "logs.jsonl", "kind": "events", "created_at": "2026-04-04T19:36:20.849882+00:00", "meta": {"n_samples": 64}}
+{"path": "candidates.jsonl", "kind": "candidates", "created_at": "2026-04-04T19:36:20.870417+00:00", "meta": {"count": 6}}
+{"path": "candidates_manifest.json", "kind": "candidates_manifest", "created_at": "2026-04-04T19:36:20.870696+00:00", "meta": {}}
+{"path": "calibration.json", "kind": "calibration", "created_at": "2026-04-04T19:36:20.870924+00:00", "meta": {}}
+{"path": "gate1_report.json", "kind": "report", "created_at": "2026-04-04T19:36:20.871457+00:00", "meta": {"n_candidates_total": 6}}
+{"path": "surrogates_params.jsonl", "kind": "surrogates_params", "created_at": "2026-04-04T19:36:20.885524+00:00", "meta": {}}
+{"path": "surrogates_index.json", "kind": "surrogates_index", "created_at": "2026-04-04T19:36:20.885635+00:00", "meta": {}}
+{"path": "causal_eval_results.jsonl", "kind": "causal_eval_results", "created_at": "2026-04-04T19:36:20.895665+00:00", "meta": {}}
+{"path": "gate2_report.json", "kind": "gate2_report", "created_at": "2026-04-04T19:36:20.896019+00:00", "meta": {}}
+{"path": "edits.json", "kind": "edits", "created_at": "2026-04-04T19:36:20.906692+00:00", "meta": {}}

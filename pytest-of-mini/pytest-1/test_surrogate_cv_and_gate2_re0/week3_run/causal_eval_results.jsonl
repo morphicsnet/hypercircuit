@@ -1,0 +1,2 @@
+{"ensemble_id": "138a758833bc", "family": "jailbreak", "causal_impact_delta": 0.03677826992733357, "sufficiency_reinstatement": 0.054370594363462144, "minimality_pass": true, "n_features": 2, "cv_score": 0.39999999999999836}
+{"ensemble_id": "82ddf69ac6d6", "family": "sycophancy", "causal_impact_delta": 0.036779924798921004, "sufficiency_reinstatement": 0.05436807823308276, "minimality_pass": true, "n_features": 2, "cv_score": 0.20000000000000367}

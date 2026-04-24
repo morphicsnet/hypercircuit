@@ -1,0 +1,39 @@
+{
+  "_schema_version": "0.1.0",
+  "run_id": "run",
+  "created_at": "2026-04-04T19:36:42.391353+00:00",
+  "stage": "editing",
+  "config_paths": [
+    "configs/base.yaml",
+    "configs/editing.yaml"
+  ],
+  "model_tag": "debug",
+  "task_family": "synthetic_parity",
+  "split": "dev",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "versions": {
+    "schema": "0.1.0",
+    "python": null,
+    "package": "hypercircuit"
+  },
+  "git_sha": "eaa4e67db887",
+  "status": "success",
+  "summary": {
+    "avg_activation_delta": 0.0,
+    "scale": 0.3
+  },
+  "provenance": {
+    "config_checksum": "056034a96aa0",
+    "dependency_snapshot": {
+      "pyproject.toml": "5970a0f32186"
+    },
+    "run_intent": "dev"
+  },
+  "finalized_at": "2026-04-04T19:36:42.398439+00:00"
+}
